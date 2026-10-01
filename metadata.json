@@ -1,0 +1,6 @@
+{
+  "name": "Shop GO",
+  "description": "Shop GO - SaaS facilitador e acelerador de vendas para afiliados e lojas na Shopee, Mercado Livre e TikTok Shop com IA integrada.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
