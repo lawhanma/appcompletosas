@@ -40,8 +40,9 @@ export interface FinancialState {
 interface FinancialContextType {
   state: FinancialState;
   userCode: string;
+  userEmail: string;
   isVip: boolean;
-  setUserCode: (code: string, isNewLogin?: boolean) => void;
+  setUserCode: (code: string, isNewLogin?: boolean, email?: string) => void;
   setUserEmail: (email: string) => void;
   addCommission: (amount: number, product: string, channel: string, type?: "comissao" | "divulgacao", saleAmount?: number) => void;
   simulateLiveSale: () => void;
@@ -64,15 +65,29 @@ const STORAGE_KEY = "shopnext_financial_v6";
 
 export const MAX_DAILY_COMMISSION_101190 = 25.00;
 
+export const getSavedAuthEmail = (): string => {
+  try {
+    const auth = localStorage.getItem("shopnext_auth");
+    if (auth) {
+      const parsed = JSON.parse(auth);
+      if (parsed.email) return parsed.email;
+    }
+  } catch (e) {
+    // ignore
+  }
+  return "";
+};
+
 const getTodayString = () => new Date().toISOString().split("T")[0];
 
 // Clean initial state for new logins:
 // "quando você identificar um login novo o saldo tem que estar zerado ok? Ai vai colocando aos poucos entendeu"
-export const createCleanState = (code: string, email: string = "tstblck5@gmail.com"): FinancialState => {
+export const createCleanState = (code: string, email?: string): FinancialState => {
   const cleanCode = code.trim();
   const isVip = cleanCode === "123456" || cleanCode === "12456";
+  const userEmail = email || getSavedAuthEmail() || "";
   return {
-    userEmail: email,
+    userEmail,
     userCode: cleanCode,
     faturamentoDiario: 0.00,
     metaFaturamentoDiario: isVip ? 3000.00 : 180.00,
@@ -379,10 +394,11 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Switch User Code & New Login handler
   // "quando você identificar um login novo o saldo tem que estar zerado ok? Ai vai colocando aos poucos entendeu"
-  const setUserCode = useCallback((code: string, isNewLogin: boolean = true) => {
+  const setUserCode = useCallback((code: string, isNewLogin: boolean = true, email?: string) => {
     const clean = code.trim();
+    const finalEmail = email || state.userEmail || getSavedAuthEmail() || "";
     if (isNewLogin) {
-      const cleanState = createCleanState(clean, state.userEmail);
+      const cleanState = createCleanState(clean, finalEmail);
       setState(cleanState);
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanState));
@@ -391,7 +407,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
       return;
     }
-    setState(prev => ({ ...prev, userCode: clean }));
+    setState(prev => ({ ...prev, userCode: clean, userEmail: finalEmail || prev.userEmail }));
   }, [state.userEmail]);
 
   const setUserEmail = useCallback((email: string) => {
@@ -595,6 +611,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       value={{
         state,
         userCode: state.userCode,
+        userEmail: state.userEmail,
         isVip,
         setUserCode,
         setUserEmail,

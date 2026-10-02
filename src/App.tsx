@@ -52,7 +52,7 @@ function AppContent() {
       <AuthScreen
         onLoginSuccess={(email, code) => {
           if (email) setUserEmail(email);
-          if (code) setUserCode(code, true);
+          if (code) setUserCode(code, true, email);
           setIsAuthenticated(true);
         }}
       />

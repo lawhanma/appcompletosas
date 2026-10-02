@@ -58,7 +58,7 @@ export function useShopeeAffiliation() {
   };
 
   const getProductAffiliateLink = (product: Product): string => {
-    return `https://shopee.com.br/search?keyword=${encodeURIComponent(product.name)}&af_sub=shopnext_agencianave7&utm_source=shopnext_affiliate`;
+    return `https://shopee.com.br/search?keyword=${encodeURIComponent(product.name)}&af_sub=shopnext_afiliado&utm_source=shopnext_affiliate`;
   };
 
   /**

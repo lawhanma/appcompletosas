@@ -44,7 +44,7 @@ const CHANNELS: Record<ChannelType, ChannelConfig> = {
     buttonLabel: "CONECTAR CONTA SHOPEE",
     platformName: "Shopee Open Platform",
     securityText: "Sua conexão é estabelecida de forma segura através de encriptação ponta a ponta homologada pela Shopee Open Platform.",
-    defaultName: "Agência Nave 7"
+    defaultName: "Minha Loja Shopee"
   },
   tiktok: {
     id: "tiktok",
@@ -56,7 +56,7 @@ const CHANNELS: Record<ChannelType, ChannelConfig> = {
     buttonLabel: "CONECTAR CONTA TIKTOK SHOP",
     platformName: "TikTok Shop Partner Platform",
     securityText: "Sua conexão é estabelecida de forma segura através de encriptação ponta a ponta homologada pela TikTok Shop Partner Platform.",
-    defaultName: "Nave 7 TikTok Creator"
+    defaultName: "Meu Canal TikTok Shop"
   },
   mercadolivre: {
     id: "mercadolivre",
@@ -68,7 +68,7 @@ const CHANNELS: Record<ChannelType, ChannelConfig> = {
     buttonLabel: "CONECTAR CONTA MERCADO LIVRE",
     platformName: "Mercado Livre Developers",
     securityText: "Sua conexão é estabelecida de forma segura através de encriptação ponta a ponta homologada pelo Mercado Livre Developers.",
-    defaultName: "Nave 7 Meli Afiliados"
+    defaultName: "Minha Conta Mercado Livre"
   }
 };
 

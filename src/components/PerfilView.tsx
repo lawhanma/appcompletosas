@@ -1,21 +1,89 @@
 import React, { useState } from "react";
+import { useFinancial } from "../context/FinancialContext";
 import { 
   User, 
   Mail, 
+  Phone,
+  KeyRound,
   ShieldCheck, 
   Sparkles, 
-  Check 
+  Check,
+  Lock
 } from "lucide-react";
 
 export const PerfilView: React.FC = () => {
-  const [name, setName] = useState("Agência Nave 7 Marketing");
-  const [email] = useState("agencianave7mkt@gmail.com");
-  const [phone, setPhone] = useState("+55 (11) 98765-4321");
-  const [pixKey, setPixKey] = useState("agencianave7mkt@gmail.com");
+  const { state, userEmail, userCode, isVip } = useFinancial();
+
+  // "no perfil sempre fica salvo com essas informcaões agencia nave 7 numeor essas coisa tem que ficar vazio sem nada, eo email la em baixo fica o que a pessoa colocou no campo de email na hora de login enteu?"
+  // As informações iniciam completamente vazias, sem nenhum dado mockado de agência ou telefone
+  const [name, setName] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem("shopnext_profile_custom");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.name && !parsed.name.toLowerCase().includes("nave 7")) {
+          return parsed.name;
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    return "";
+  });
+
+  const [phone, setPhone] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem("shopnext_profile_custom");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.phone && !parsed.phone.includes("98765-4321")) {
+          return parsed.phone;
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    return "";
+  });
+
+  const [pixKey, setPixKey] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem("shopnext_profile_custom");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.pixKey && !parsed.pixKey.toLowerCase().includes("agencianave7mkt")) {
+          return parsed.pixKey;
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    return "";
+  });
+
+  // O e-mail exibido é exatamente o e-mail que o usuário informou na tela de login
+  const loginEmail = userEmail || state.userEmail || (() => {
+    try {
+      const auth = localStorage.getItem("shopnext_auth");
+      if (auth) {
+        const parsed = JSON.parse(auth);
+        if (parsed.email) return parsed.email;
+      }
+    } catch (e) {
+      // ignore
+    }
+    return "";
+  })();
+
   const [saved, setSaved] = useState(false);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    try {
+      localStorage.setItem("shopnext_profile_custom", JSON.stringify({ name, phone, pixKey }));
+    } catch (e) {
+      // ignore
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -27,7 +95,7 @@ export const PerfilView: React.FC = () => {
           Perfil & Configurações da Conta
         </h1>
         <p className="text-xs text-slate-500 mt-1">
-          Gerencie suas informações de acesso, plano ativo e dados bancários para recebimento de comissões.
+          Gerencie suas informações de acesso, plano ativo e dados para recebimento de comissões.
         </p>
       </div>
 
@@ -36,11 +104,16 @@ export const PerfilView: React.FC = () => {
         <div>
           <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-white/10 text-white text-[10px] font-semibold uppercase tracking-wider mb-2 border border-white/15">
             <Sparkles className="w-3 h-3 text-orange-400" />
-            PLANO ATIVO: SHOP GO PRO VIP
+            {isVip ? `PLANO ATIVO: SHOP GO PRO VIP (${userCode || "123456"})` : `PLANO ATIVO: SHOP GO STANDARD (${userCode || "101190"})`}
           </div>
-          <h2 className="text-base sm:text-lg font-semibold text-white">Acesso Ilimitado à IA e Fornecedores</h2>
+          <h2 className="text-base sm:text-lg font-semibold text-white">
+            {isVip ? "Acesso Ilimitado à IA, Robôs de Divulgação e Fornecedores" : "Plano Afiliado Iniciante Shopee & TikTok Shop"}
+          </h2>
           <p className="text-xs text-slate-300 mt-1 max-w-md leading-relaxed">
-            Geração ilimitada de vídeos verticais para TikTok, disparos automáticos e comissão bonificada de até 20%.
+            {isVip 
+              ? "Geração de vídeos, disparos automáticos com comissão de R$ 20 a R$ 70 por divulgação e meta diária de até R$ 3.000,00."
+              : "Automação de divulgação em redes sociais parceiras com limite diário de até R$ 25,00 por dia de comissão."
+            }
           </p>
         </div>
 
@@ -53,14 +126,20 @@ export const PerfilView: React.FC = () => {
 
       {/* Profile Form */}
       <form onSubmit={handleSave} className="bg-white rounded-xl border border-slate-200/80 p-5 sm:p-6 shadow-xs space-y-4">
-        <h3 className="font-semibold text-slate-900 text-sm font-display">
-          Dados da Empresa e Afiliado
-        </h3>
+        <div>
+          <h3 className="font-semibold text-slate-900 text-sm font-display">
+            Dados da Empresa e Afiliado
+          </h3>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Preencha seus dados cadastrais e chave Pix para repasse dos saques.
+          </p>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Nome */}
           <div>
             <label className="text-xs font-medium text-slate-700 block mb-1">
-              Nome da Agência / Afiliado:
+              Nome Completo / Razão Social:
             </label>
             <div className="relative">
               <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -68,48 +147,71 @@ export const PerfilView: React.FC = () => {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-[#EE4D2D] focus:ring-1 focus:ring-[#EE4D2D]/20 transition-colors"
+                placeholder="Ex: Seu Nome ou da sua Empresa..."
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#EE4D2D] focus:ring-1 focus:ring-[#EE4D2D]/20 transition-colors"
               />
             </div>
           </div>
 
+          {/* E-mail da Conta (vem do login) */}
           <div>
-            <label className="text-xs font-medium text-slate-700 block mb-1">
-              E-mail de Login & Contato:
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-medium text-slate-700">
+                E-mail de Login & Acesso:
+              </label>
+              <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/60 font-medium">
+                Conectado
+              </span>
+            </div>
             <div className="relative">
               <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="email"
                 disabled
-                value={email}
-                className="w-full pl-9 pr-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-xs text-slate-500 cursor-not-allowed"
+                value={loginEmail}
+                placeholder="E-mail de login da conta..."
+                className="w-full pl-9 pr-8 py-2 bg-slate-100 border border-slate-200 rounded-lg text-xs text-slate-700 font-medium cursor-not-allowed select-all"
+                title="Este é o e-mail utilizado no login de acesso"
               />
+              <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
             </div>
+            <p className="text-[10px] text-slate-400 mt-1">
+              E-mail autenticado durante o login na plataforma.
+            </p>
           </div>
 
+          {/* Telefone / WhatsApp */}
           <div>
             <label className="text-xs font-medium text-slate-700 block mb-1">
               Telefone / WhatsApp:
             </label>
-            <input
-              type="text"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-[#EE4D2D] focus:ring-1 focus:ring-[#EE4D2D]/20 transition-colors"
-            />
+            <div className="relative">
+              <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Ex: (11) 99999-9999..."
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#EE4D2D] focus:ring-1 focus:ring-[#EE4D2D]/20 transition-colors"
+              />
+            </div>
           </div>
 
+          {/* Chave Pix */}
           <div>
             <label className="text-xs font-medium text-slate-700 block mb-1">
               Chave Pix Cadastrada (Repasses Automáticos):
             </label>
-            <input
-              type="text"
-              value={pixKey}
-              onChange={(e) => setPixKey(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-[#EE4D2D] focus:ring-1 focus:ring-[#EE4D2D]/20 transition-colors"
-            />
+            <div className="relative">
+              <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={pixKey}
+                onChange={(e) => setPixKey(e.target.value)}
+                placeholder="Ex: CPF, CNPJ, Celular, E-mail ou Chave Aleatória..."
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#EE4D2D] focus:ring-1 focus:ring-[#EE4D2D]/20 transition-colors"
+              />
+            </div>
           </div>
         </div>
 

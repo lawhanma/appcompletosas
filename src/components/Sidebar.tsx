@@ -93,14 +93,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Bottom Profile / User Info */}
       <div className="p-3 border-t border-slate-200/60 space-y-2">
         <div className="flex items-center gap-2.5 px-1 py-1">
-          {/* Avatar TS */}
-          <div className="w-7 h-7 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center shrink-0 text-[10px] tracking-tight">
-            TS
+          {/* User Avatar */}
+          <div className="w-7 h-7 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center shrink-0 text-[10px] tracking-tight uppercase">
+            {(state.userEmail || "AF").slice(0, 2)}
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-semibold text-slate-900 truncate" title={state.userEmail}>
-                {state.userEmail}
+              <div className="text-xs font-semibold text-slate-900 truncate" title={state.userEmail || "Afiliado Conectado"}>
+                {state.userEmail || "Afiliado Conectado"}
               </div>
               <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
