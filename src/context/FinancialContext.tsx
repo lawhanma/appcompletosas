@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { PRODUCTS } from "../data/mockData";
+import { internalDb } from "../utils/internalDb";
 
 export interface Transaction {
   id: string;
@@ -35,6 +36,7 @@ export interface FinancialState {
   dailyAccumulated: number;
   currentDayString: string;
   aiCredits: number;
+  hasDoneDivulgacao?: boolean;     // Indica se já realizou divulgação no dia
 }
 
 interface FinancialContextType {
@@ -61,12 +63,14 @@ interface FinancialContextType {
   clearNotification: () => void;
 }
 
-const STORAGE_KEY = "shopnext_financial_v6";
+const STORAGE_KEY = "shopnext_financial_v7";
 
 export const MAX_DAILY_COMMISSION_101190 = 25.00;
 
 export const getSavedAuthEmail = (): string => {
   try {
+    const session = internalDb.getActiveSession();
+    if (session?.userEmail) return session.userEmail;
     const auth = localStorage.getItem("shopnext_auth");
     if (auth) {
       const parsed = JSON.parse(auth);
@@ -82,6 +86,7 @@ const getTodayString = () => new Date().toISOString().split("T")[0];
 
 // Clean initial state for new logins:
 // "quando você identificar um login novo o saldo tem que estar zerado ok? Ai vai colocando aos poucos entendeu"
+// "Quando a pessoa entra no codigo de compra 101190, já pinga venda e ela nem fez divulgação nenhum tenta arrumar essa questão!"
 export const createCleanState = (code: string, email?: string): FinancialState => {
   const cleanCode = code.trim();
   const isVip = cleanCode === "123456" || cleanCode === "12456";
@@ -104,6 +109,7 @@ export const createCleanState = (code: string, email?: string): FinancialState =
     currentDayString: getTodayString(),
     lastDripTimestamp: Date.now(),
     aiCredits: isVip ? 5 : 4,
+    hasDoneDivulgacao: false, // Inicia SEM divulgação realizada
     transactions: []
   };
 };
@@ -116,9 +122,14 @@ const FinancialContext = createContext<FinancialContextType | null>(null);
 export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<FinancialState>(() => {
     try {
+      const activeSession = internalDb.getActiveSession();
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
+        if (activeSession && activeSession.purchaseCode) {
+          parsed.userCode = activeSession.purchaseCode;
+          if (activeSession.userEmail) parsed.userEmail = activeSession.userEmail;
+        }
         const isVip = parsed.userCode === "123456" || parsed.userCode === "12456";
         const today = getTodayString();
         if (parsed.currentDayString !== today) {
@@ -127,12 +138,15 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           parsed.pedidosHoje = 0;
           parsed.faturamentoDiario = 0;
           parsed.aiCredits = isVip ? 5 : 4;
+          parsed.hasDoneDivulgacao = false;
         }
         if (typeof parsed.saldoDisponivel !== "number") parsed.saldoDisponivel = 0;
         if (typeof parsed.saldoPendente !== "number") parsed.saldoPendente = 0;
         if (typeof parsed.dailyAccumulated !== "number") parsed.dailyAccumulated = 0;
         parsed.metaFaturamentoDiario = isVip ? 3000.00 : 180.00;
         return parsed;
+      } else if (activeSession && activeSession.purchaseCode) {
+        return createCleanState(activeSession.purchaseCode, activeSession.userEmail);
       }
     } catch (e) {
       console.error("Error reading financial state from localStorage:", e);
@@ -255,6 +269,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         cliquesVisualizacoes: newCliques,
         comissaoMedia: newMedia,
         dailyAccumulated: newDaily,
+        hasDoneDivulgacao: true,
         lastDripTimestamp: Date.now(),
         transactions: [newTx, ...prev.transactions.slice(0, 39)]
       };
@@ -460,11 +475,17 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Real-time sale drip throughout the day:
   // "para os logins 123456 coloque na dashboard ao longo do dia va adicionando até 3 mil reais de faturamento"
-  // "e no codigo de compra 101190, vai ter no maximo 25 reais por dia de comissão!"
-  // "Ai vai colocando aos poucos entendeu"
+  // "Quando a pessoa entra no codigo de compra 101190, já pinga venda e ela nem fez divulgação nenhum tenta arrumar essa questão!"
   useEffect(() => {
     const isVipUser = state.userCode === "123456" || state.userCode === "12456";
-    const cap = isVipUser ? 3000.00 : 180.00;
+    
+    // Regra estrita: Para o plano standard (101190), NÃO pode pingar venda automática ao logar sem divulgação!
+    // Vendas e comissões para 101190 só ocorrem quando a pessoa efetivamente faz divulgação (nos grupos, robô de divulgação ou IA).
+    if (!isVipUser) {
+      return;
+    }
+
+    const cap = 3000.00;
 
     const timer = setInterval(() => {
       setState(current => {
@@ -474,26 +495,13 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           return current;
         }
 
-        // Limite estrito para 101190: Máximo R$ 25,00 por dia de comissão!
-        if (!isVipUser && current.dailyAccumulated >= MAX_DAILY_COMMISSION_101190) {
-          return current;
-        }
-
         const randomProd = PRODUCTS[Math.floor(Math.random() * PRODUCTS.length)];
-        const rawSale = isVipUser 
-          ? Number((Math.random() * 85 + 49).toFixed(2))
-          : Number((Math.random() * 20 + 35).toFixed(2));
+        const rawSale = Number((Math.random() * 85 + 49).toFixed(2));
         const cappedSale = Math.min(rawSale, Number((cap - current.faturamentoDiario).toFixed(2)));
         if (cappedSale <= 0) return current;
 
         const commRate = randomProd.commissionRate ? randomProd.commissionRate / 100 : 0.15;
-        let commAmount = Number((cappedSale * commRate).toFixed(2));
-
-        if (!isVipUser) {
-          const remainingDaily = Math.max(0, Number((MAX_DAILY_COMMISSION_101190 - current.dailyAccumulated).toFixed(2)));
-          commAmount = Math.min(commAmount, remainingDaily);
-          if (commAmount <= 0) return current;
-        }
+        const commAmount = Number((cappedSale * commRate).toFixed(2));
 
         // New sale enters into Saldo Pendente (awaiting delivery)
         const newSaldoPendente = Number((current.saldoPendente + commAmount).toFixed(2));
@@ -549,7 +557,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           transactions: [newTx, ...current.transactions.slice(0, 39)]
         };
       });
-    }, isVipUser ? 10000 : 18000);
+    }, 11000);
 
     return () => clearInterval(timer);
   }, [state.userCode]);

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { NavTab, Product } from "./types";
 import { FinancialProvider, useFinancial } from "./context/FinancialContext";
 import { Sidebar } from "./components/Sidebar";
@@ -12,16 +12,42 @@ import { ConexoesView } from "./components/ConexoesView";
 import { PerfilView } from "./components/PerfilView";
 import { AuthScreen } from "./components/AuthScreen";
 import { WhatsAppFloatingButton } from "./components/WhatsAppFloatingButton";
+import { internalDb } from "./utils/internalDb";
 import { DollarSign, CheckCircle2, X } from "lucide-react";
 
 function AppContent() {
-  // Starts on the login screen as requested by user
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  // Inicialização resiliente com banco de dados interno (evita deslogar rápido / ao recarregar)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    const session = internalDb.getActiveSession();
+    return !!session?.authenticated;
+  });
   const [activeTab, setActiveTab] = useState<NavTab>("dashboard");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [contextProduct, setContextProduct] = useState<Product | null>(null);
   const [divulgacaoSubTab, setDivulgacaoSubTab] = useState<"automatica" | "grupos" | "tiktok">("automatica");
   const { lastSaleNotification, clearNotification, setUserEmail, setUserCode } = useFinancial();
+
+  // Sincroniza e restaura a sessão persistente com o IndexedDB e LocalStorage
+  useEffect(() => {
+    internalDb.initAsyncSession().then((session) => {
+      if (session?.authenticated) {
+        setIsAuthenticated(true);
+        if (session.userEmail) setUserEmail(session.userEmail);
+        if (session.purchaseCode) setUserCode(session.purchaseCode, false, session.userEmail);
+      }
+    });
+  }, [setUserCode, setUserEmail]);
+
+  // Prolonga a sessão enquanto o usuário utiliza a aplicação (touch a cada 5 min e ao interagir)
+  useEffect(() => {
+    if (isAuthenticated) {
+      internalDb.touchSession();
+      const interval = setInterval(() => {
+        internalDb.touchSession();
+      }, 5 * 60 * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated]);
 
   const handleNavigateTab = (
     tab: NavTab, 
@@ -46,13 +72,19 @@ function AppContent() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // If not authenticated, display the login screen
+  // Se não estiver autenticado, exibe a tela de login
   if (!isAuthenticated) {
     return (
       <AuthScreen
         onLoginSuccess={(email, code) => {
+          const finalCode = code || "101190";
+          internalDb.saveSession({
+            userEmail: email,
+            purchaseCode: finalCode,
+            authenticated: true
+          });
           if (email) setUserEmail(email);
-          if (code) setUserCode(code, true, email);
+          if (finalCode) setUserCode(finalCode, true, email);
           setIsAuthenticated(true);
         }}
       />
@@ -104,7 +136,10 @@ function AppContent() {
         }}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-        onLogout={() => setIsAuthenticated(false)}
+        onLogout={() => {
+          internalDb.clearSession();
+          setIsAuthenticated(false);
+        }}
       />
 
       {/* Main Content Area */}

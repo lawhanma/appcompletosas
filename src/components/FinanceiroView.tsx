@@ -19,7 +19,20 @@ export const FinanceiroView: React.FC = () => {
   const { state, requestWithdrawal: _requestWithdrawal, releaseDeliveredSale } = useFinancial();
   const [withdrawAmount, setWithdrawAmount] = useState<string>("");
   const [keyType, setKeyType] = useState<string>("CPF");
-  const [pixKey, setPixKey] = useState<string>("000.000.000-00");
+  const [pixKey, setPixKey] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem("shopnext_profile_custom");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.pixKey && !parsed.pixKey.includes("000.000") && !parsed.pixKey.toLowerCase().includes("nave")) {
+          return parsed.pixKey;
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    return "";
+  });
   const [showAntecipationModal, setShowAntecipationModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);

@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ShopNextLogo } from "./ShopNextLogo";
+import { internalDb, ALLOWED_CODES } from "../utils/internalDb";
 import { 
   Key, 
   Lock, 
@@ -19,10 +20,24 @@ interface AuthScreenProps {
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => {
+    try {
+      const session = internalDb.getActiveSession();
+      if (session?.userEmail) return session.userEmail;
+      const users = internalDb.getAllUsers();
+      if (users.length > 0) return users[users.length - 1].email;
+    } catch {}
+    return "";
+  });
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [purchaseCode, setPurchaseCode] = useState("");
+  const [purchaseCode, setPurchaseCode] = useState(() => {
+    try {
+      const session = internalDb.getActiveSession();
+      if (session?.purchaseCode) return session.purchaseCode;
+    } catch {}
+    return "";
+  });
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -38,7 +53,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     }
 
     // Access allowed with authorized codes
-    if (cleanCode !== "101190" && cleanCode !== "123456" && cleanCode !== "12456") {
+    if (!ALLOWED_CODES.includes(cleanCode)) {
       setErrorMessage(
         "Código de compra inválido. Verifique o código recebido no seu e-mail de compra."
       );
@@ -53,9 +68,24 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
-      localStorage.setItem("shopnext_auth", JSON.stringify({ email, authenticated: true, purchaseCode: cleanCode }));
-      onLoginSuccess(email, cleanCode);
-    }, 600);
+      // Salva usuário e sessão no banco interno resiliente
+      const finalName = name.trim() || (isRegisterMode ? "Novo Afiliado" : "Afiliado Shop GO");
+      internalDb.saveUser({
+        email: email.trim(),
+        name: finalName,
+        purchaseCode: cleanCode,
+        password: password.trim()
+      });
+
+      internalDb.saveSession({
+        userEmail: email.trim(),
+        purchaseCode: cleanCode,
+        name: finalName,
+        authenticated: true
+      });
+
+      onLoginSuccess(email.trim(), cleanCode);
+    }, 450);
   };
 
   return (
@@ -119,7 +149,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             {isRegisterMode && (
               <div>
                 <label className="text-xs font-medium text-slate-700 block mb-1">
-                  Nome Completo / Nome da Agência:
+                  Nome Completo / Razão Social:
                 </label>
                 <div className="relative">
                   <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -128,7 +158,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Seu nome ou da sua agência"
+                    placeholder="Digite seu nome completo"
                     className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#EE4D2D] focus:ring-1 focus:ring-[#EE4D2D]/20 transition-colors"
                   />
                 </div>

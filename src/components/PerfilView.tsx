@@ -1,29 +1,47 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useFinancial } from "../context/FinancialContext";
 import { 
   User, 
   Mail, 
-  Phone,
-  KeyRound,
+  Phone, 
+  KeyRound, 
   ShieldCheck, 
   Sparkles, 
-  Check,
-  Lock
+  Check, 
+  Lock,
+  Trash2
 } from "lucide-react";
+
+// Helper to remove any old mock agency or placeholder data from localStorage
+const sanitizeClean = (val?: string) => {
+  if (!val) return "";
+  const lower = val.toLowerCase();
+  if (
+    lower.includes("nave") || 
+    lower.includes("agencia") || 
+    lower.includes("agência") || 
+    lower.includes("98765") || 
+    lower.includes("4321") ||
+    lower.includes("000.000") ||
+    lower.includes("nave 7")
+  ) {
+    return "";
+  }
+  return val.trim();
+};
 
 export const PerfilView: React.FC = () => {
   const { state, userEmail, userCode, isVip } = useFinancial();
 
+  // Exigência do usuário:
   // "no perfil sempre fica salvo com essas informcaões agencia nave 7 numeor essas coisa tem que ficar vazio sem nada, eo email la em baixo fica o que a pessoa colocou no campo de email na hora de login enteu?"
-  // As informações iniciam completamente vazias, sem nenhum dado mockado de agência ou telefone
+  // Todos os dados cadastrais iniciam completamente vazios, sem nenhum dado mockado de agência, telefone ou chave pix
   const [name, setName] = useState<string>(() => {
     try {
       const saved = localStorage.getItem("shopnext_profile_custom");
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.name && !parsed.name.toLowerCase().includes("nave 7")) {
-          return parsed.name;
-        }
+        return sanitizeClean(parsed.name);
       }
     } catch (e) {
       // ignore
@@ -36,9 +54,7 @@ export const PerfilView: React.FC = () => {
       const saved = localStorage.getItem("shopnext_profile_custom");
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.phone && !parsed.phone.includes("98765-4321")) {
-          return parsed.phone;
-        }
+        return sanitizeClean(parsed.phone);
       }
     } catch (e) {
       // ignore
@@ -51,9 +67,7 @@ export const PerfilView: React.FC = () => {
       const saved = localStorage.getItem("shopnext_profile_custom");
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.pixKey && !parsed.pixKey.toLowerCase().includes("agencianave7mkt")) {
-          return parsed.pixKey;
-        }
+        return sanitizeClean(parsed.pixKey);
       }
     } catch (e) {
       // ignore
@@ -61,7 +75,29 @@ export const PerfilView: React.FC = () => {
     return "";
   });
 
-  // O e-mail exibido é exatamente o e-mail que o usuário informou na tela de login
+  // Limpa automaticamente qualquer resquício de mock do localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("shopnext_profile_custom");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const cleanName = sanitizeClean(parsed.name);
+        const cleanPhone = sanitizeClean(parsed.phone);
+        const cleanPix = sanitizeClean(parsed.pixKey);
+        if (cleanName !== parsed.name || cleanPhone !== parsed.phone || cleanPix !== parsed.pixKey) {
+          localStorage.setItem("shopnext_profile_custom", JSON.stringify({
+            name: cleanName,
+            phone: cleanPhone,
+            pixKey: cleanPix
+          }));
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+  // O e-mail exibido é exatamente o e-mail que o usuário informou no campo de e-mail na hora do login
   const loginEmail = userEmail || state.userEmail || (() => {
     try {
       const auth = localStorage.getItem("shopnext_auth");
@@ -80,12 +116,29 @@ export const PerfilView: React.FC = () => {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      localStorage.setItem("shopnext_profile_custom", JSON.stringify({ name, phone, pixKey }));
+      localStorage.setItem("shopnext_profile_custom", JSON.stringify({ 
+        name: sanitizeClean(name), 
+        phone: sanitizeClean(phone), 
+        pixKey: sanitizeClean(pixKey) 
+      }));
     } catch (e) {
       // ignore
     }
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
+  };
+
+  const handleClearAll = () => {
+    setName("");
+    setPhone("");
+    setPixKey("");
+    try {
+      localStorage.removeItem("shopnext_profile_custom");
+    } catch (e) {
+      // ignore
+    }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
   };
 
   return (
@@ -125,16 +178,17 @@ export const PerfilView: React.FC = () => {
       </div>
 
       {/* Profile Form */}
-      <form onSubmit={handleSave} className="bg-white rounded-xl border border-slate-200/80 p-5 sm:p-6 shadow-xs space-y-4">
+      <form onSubmit={handleSave} className="bg-white rounded-xl border border-slate-200/80 p-5 sm:p-6 shadow-xs space-y-6">
         <div>
           <h3 className="font-semibold text-slate-900 text-sm font-display">
-            Dados da Empresa e Afiliado
+            Dados do Afiliado & Conta Bancária
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            Preencha seus dados cadastrais e chave Pix para repasse dos saques.
+            Preencha seus dados cadastrais e chave Pix para repasse dos saques. Os campos iniciam vazios para seu preenchimento.
           </p>
         </div>
 
+        {/* Informações Pessoais & Pix (Iniciam vazias sem agência mock) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Nome */}
           <div>
@@ -147,37 +201,10 @@ export const PerfilView: React.FC = () => {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Ex: Seu Nome ou da sua Empresa..."
+                placeholder="Digite seu nome completo..."
                 className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#EE4D2D] focus:ring-1 focus:ring-[#EE4D2D]/20 transition-colors"
               />
             </div>
-          </div>
-
-          {/* E-mail da Conta (vem do login) */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-medium text-slate-700">
-                E-mail de Login & Acesso:
-              </label>
-              <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/60 font-medium">
-                Conectado
-              </span>
-            </div>
-            <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="email"
-                disabled
-                value={loginEmail}
-                placeholder="E-mail de login da conta..."
-                className="w-full pl-9 pr-8 py-2 bg-slate-100 border border-slate-200 rounded-lg text-xs text-slate-700 font-medium cursor-not-allowed select-all"
-                title="Este é o e-mail utilizado no login de acesso"
-              />
-              <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
-            </div>
-            <p className="text-[10px] text-slate-400 mt-1">
-              E-mail autenticado durante o login na plataforma.
-            </p>
           </div>
 
           {/* Telefone / WhatsApp */}
@@ -197,8 +224,8 @@ export const PerfilView: React.FC = () => {
             </div>
           </div>
 
-          {/* Chave Pix */}
-          <div>
+          {/* Chave Pix (Inicia vazia) */}
+          <div className="sm:col-span-2">
             <label className="text-xs font-medium text-slate-700 block mb-1">
               Chave Pix Cadastrada (Repasses Automáticos):
             </label>
@@ -208,17 +235,67 @@ export const PerfilView: React.FC = () => {
                 type="text"
                 value={pixKey}
                 onChange={(e) => setPixKey(e.target.value)}
-                placeholder="Ex: CPF, CNPJ, Celular, E-mail ou Chave Aleatória..."
+                placeholder="Ex: CPF, Celular, E-mail ou Chave Aleatória..."
                 className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#EE4D2D] focus:ring-1 focus:ring-[#EE4D2D]/20 transition-colors"
               />
             </div>
+            <p className="text-[10px] text-slate-400 mt-1">
+              Sua chave Pix para onde serão enviadas as comissões solicitadas na aba Financeiro.
+            </p>
+          </div>
+        </div>
+
+        {/* "eo email la em baixo fica o que a pessoa colocou no campo de email na hora de login enteu?" */}
+        <div className="pt-4 border-t border-slate-200/80">
+          <div className="bg-slate-50 rounded-xl p-4 border border-slate-200/90 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-slate-600" />
+                <span className="text-xs font-bold text-slate-800">
+                  E-mail de Login & Acesso à Plataforma
+                </span>
+              </div>
+              <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/70 font-semibold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                Autenticado
+              </span>
+            </div>
+
+            <div className="relative">
+              <input
+                type="email"
+                disabled
+                value={loginEmail || "Não informado"}
+                className="w-full pl-3 pr-8 py-2.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 font-semibold cursor-not-allowed select-all shadow-2xs"
+                title="Este é o e-mail que você digitou no campo de e-mail ao fazer o login"
+              />
+              <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
+            </div>
+
+            <p className="text-[11px] text-slate-500">
+              📌 Este é exatamente o e-mail que você digitou na hora de fazer o login na sua conta. Ele permanece fixo e seguro para identificação do seu acesso.
+            </p>
           </div>
         </div>
 
         <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>Dados protegidos com criptografia SSL 256 bits</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <span>Dados protegidos com criptografia SSL 256 bits</span>
+            </div>
+
+            {(name || phone || pixKey) && (
+              <button
+                type="button"
+                onClick={handleClearAll}
+                className="text-[11px] text-rose-600 hover:text-rose-700 flex items-center gap-1 font-medium hover:underline cursor-pointer"
+                title="Limpar todos os campos"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>Limpar campos</span>
+              </button>
+            )}
           </div>
 
           <button

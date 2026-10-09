@@ -46,7 +46,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
   initialProduct,
   onOpenVideoCreator
 }) => {
-  const { addCommission, userCode } = useFinancial();
+  const { addCommission, userCode, state } = useFinancial();
 
   // Selected product to publish
   const [selectedProduct, setSelectedProduct] = useState<Product>(
@@ -55,12 +55,26 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
   const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
   const [productSearchQuery, setProductSearchQuery] = useState("");
 
-  // Filter states - Default to Facebook and Public groups as requested by user
-  const [platformFilter, setPlatformFilter] = useState<"todos" | "whatsapp" | "facebook" | "telegram">("facebook");
-  const [privacyFilter, setPrivacyFilter] = useState<"publicos" | "todos">("publicos");
+  // Filter states - Default to "todos" so all groups (WhatsApp, Facebook, Telegram) are immediately visible and working
+  const [platformFilter, setPlatformFilter] = useState<"todos" | "whatsapp" | "facebook" | "telegram">("todos");
+  const [privacyFilter, setPrivacyFilter] = useState<"todos" | "publicos">("todos");
   const [categoryFilter, setCategoryFilter] = useState<string>("Todos");
   const [membershipFilter, setMembershipFilter] = useState<"todos" | "membro" | "novos">("todos");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Mass automated broadcasting state (Disparo em Todos os Grupos)
+  const [isMassPostingOpen, setIsMassPostingOpen] = useState(false);
+  const [isMassPostingRunning, setIsMassPostingRunning] = useState(false);
+  const [massProgress, setMassProgress] = useState(0);
+  const [massStatusText, setMassStatusText] = useState("");
+  const [massCompletedGroupIds, setMassCompletedGroupIds] = useState<string[]>([]);
+  const [massResult, setMassResult] = useState<{
+    totalGroups: number;
+    totalViews: number;
+    totalClicks: number;
+    totalSales: number;
+    totalCommission: number;
+  } | null>(null);
 
   // Joined groups state stored in localStorage
   const [joinedGroupIds, setJoinedGroupIds] = useState<string[]>(() => {
@@ -215,6 +229,19 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
     setTimeout(() => setCopiedKey(null), 2500);
   };
 
+  // Helper to ensure valid and normalized group URLs
+  const formatGroupUrl = (url: string): string => {
+    if (!url) return "#";
+    let trimmed = url.trim();
+    if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+      trimmed = `https://${trimmed}`;
+    }
+    if (trimmed.includes("chat.whatsapp.com/invite/")) {
+      trimmed = trimmed.replace("chat.whatsapp.com/invite/", "chat.whatsapp.com/");
+    }
+    return trimmed;
+  };
+
   // Open Group Link directly in new window
   const handleOpenGroupLink = (group: FacebookGroup, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -224,9 +251,9 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
       handleToggleMembership(group.id);
     }
 
-    // Open link
-    window.open(group.groupUrl, "_blank", "noopener,noreferrer");
-    showToast(`Abrindo ${group.name}... Boa divulgação!`);
+    const targetUrl = formatGroupUrl(group.groupUrl);
+    window.open(targetUrl, "_blank", "noopener,noreferrer");
+    showToast(`Redirecionando para o grupo específico: ${group.name}`);
   };
 
   // Copy Facebook Copy and open group
@@ -240,40 +267,56 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
       handleToggleMembership(group.id);
     }
 
-    window.open(group.groupUrl, "_blank", "noopener,noreferrer");
-    showToast("📋 Publicação e link copiados! Cole no grupo do Facebook que acabou de abrir.");
+    const targetUrl = formatGroupUrl(group.groupUrl);
+    window.open(targetUrl, "_blank", "noopener,noreferrer");
+    showToast(`📋 Publicação e link copiados! Redirecionando para o feed do grupo ${group.name}...`);
     setTimeout(() => setCopiedKey(null), 3000);
   };
 
-  // Open and Post to group
+  // Open and Post directly to the specific group
   const handlePostDirectly = (group: FacebookGroup) => {
     // Copy the prepared text
     navigator.clipboard.writeText(customCopyText);
 
-    if (group.platform === "whatsapp") {
-      // WhatsApp direct share with text
-      const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(customCopyText)}`;
-      window.open(waUrl, "_blank", "noopener,noreferrer");
-      showToast("Texto copiado e WhatsApp aberto para envio!");
-    } else if (group.platform === "facebook") {
-      // Open Facebook group
-      window.open(group.groupUrl, "_blank", "noopener,noreferrer");
-      showToast("Texto copiado! Cole no feed do grupo do Facebook que acabou de abrir.");
-    } else if (group.platform === "telegram") {
-      // Telegram share
-      const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(
-        `https://shopee.com.br/universal-link/${selectedProduct.id}`
-      )}&text=${encodeURIComponent(customCopyText)}`;
-      window.open(tgUrl, "_blank", "noopener,noreferrer");
-      showToast("Texto copiado e Telegram aberto para publicação!");
-    } else {
-      window.open(group.groupUrl, "_blank", "noopener,noreferrer");
-      showToast("Texto copiado! Cole no grupo.");
+    if (!joinedGroupIds.includes(group.id)) {
+      handleToggleMembership(group.id);
     }
+
+    const targetUrl = formatGroupUrl(group.groupUrl);
+    window.open(targetUrl, "_blank", "noopener,noreferrer");
+    showToast(`📋 Texto copiado! Redirecionando para o grupo específico ${group.name}... Cole no feed/chat!`);
+  };
+
+  // Share directly to the specific group based on platform
+  const handleDirectShareToGroup = (group: FacebookGroup, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const copyText = generateCopyForProduct(selectedProduct, copyStyle, group.platform);
+    try {
+      if (navigator?.clipboard?.writeText) {
+        navigator.clipboard.writeText(copyText).catch(() => {});
+      }
+    } catch {}
+
+    if (!joinedGroupIds.includes(group.id)) {
+      handleToggleMembership(group.id);
+    }
+
+    const targetUrl = formatGroupUrl(group.groupUrl);
+    window.open(targetUrl, "_blank", "noopener,noreferrer");
+    showToast(`📋 Texto com link copiado! Redirecionando para o grupo específico: ${group.name}`);
+  };
+
+  // Trigger assisted automated posting from card or modal
+  const handleTriggerCardAssistedPosting = (group: FacebookGroup, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setActiveGroupForPublishing(group);
+    window.scrollTo({ top: 380, behavior: "smooth" });
+    handleRunAssistedPosting(group);
   };
 
   // Run Assisted Automated Posting in Group
   const handleRunAssistedPosting = (group: FacebookGroup) => {
+    setActiveGroupForPublishing(group);
     setIsSendingPost(true);
     setPostProgress(15);
     setPostStatusText(`Conectando ao ${group.name}...`);
@@ -294,19 +337,25 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
       setPostStatusText(`Membros visualizando a oferta e clicando no link!`);
 
       // Determine commission based on user code
-      let commissionVal = Number((selectedProduct.commissionValue * 0.45).toFixed(2));
+      const isVipUser = userCode === "123456" || userCode === "12456";
+      let commissionVal = 0;
       let sales = 1;
       let viewsCount = Math.floor(Math.random() * 350 + 620);
       let clicksCount = Math.floor(Math.random() * 60 + 85);
 
-      if (userCode === "123456" || userCode === "12456") {
+      if (isVipUser) {
         commissionVal = Number((Math.random() * (70 - 20) + 20).toFixed(2));
         sales = Math.floor(Math.random() * 3 + 2);
         viewsCount = Math.floor(Math.random() * 1800 + 2400);
         clicksCount = Math.floor(Math.random() * 240 + 350);
       } else {
-        // Max ~R$ 3 for normal user code 101190
-        commissionVal = Number((Math.random() * 0.85 + 2.10).toFixed(2));
+        const remainingDaily = Math.max(0, Number((25.00 - (state.dailyAccumulated || 0)).toFixed(2)));
+        if (remainingDaily > 0) {
+          const raw = Number((Math.random() * 0.85 + 2.10).toFixed(2));
+          commissionVal = Math.min(raw, remainingDaily);
+        } else {
+          commissionVal = 0;
+        }
       }
 
       setPostSuccessData({
@@ -318,12 +367,17 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
       });
 
       // Add real commission to financial store!
-      addCommission(
-        commissionVal, 
-        selectedProduct.name, 
-        `Publicação em Grupo: ${group.name}`, 
-        "divulgacao"
-      );
+      if (commissionVal > 0) {
+        addCommission(
+          commissionVal, 
+          selectedProduct.name, 
+          `Publicação em Grupo: ${group.name}`, 
+          "divulgacao"
+        );
+        showToast(`🎉 Publicação concluída com sucesso! +R$ ${commissionVal.toFixed(2).replace(".", ",")} adicionados ao seu saldo!`);
+      } else if (!isVipUser) {
+        showToast(`⚠️ Publicação enviada no ${group.name}! Limite diário de comissão de R$ 25,00 atingido para o código 101190.`);
+      }
 
       // Add to joined groups if not already
       if (!joinedGroupIds.includes(group.id)) {
@@ -331,8 +385,67 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
       }
 
       setIsSendingPost(false);
-      showToast(`🎉 Publicação concluída com sucesso! +R$ ${commissionVal.toFixed(2).replace(".", ",")} adicionados ao seu saldo!`);
     }, 3400);
+  };
+
+  // Mass automated broadcasting to ALL groups
+  const handleStartMassPosting = () => {
+    setIsMassPostingRunning(true);
+    setMassProgress(4);
+    setMassCompletedGroupIds([]);
+    setMassResult(null);
+
+    const groupsToProcess = allGroups;
+    let idx = 0;
+    const completed: string[] = [];
+
+    const interval = setInterval(() => {
+      if (idx < groupsToProcess.length) {
+        const grp = groupsToProcess[idx];
+        completed.push(grp.id);
+        setMassCompletedGroupIds([...completed]);
+        const progressPct = Math.round(((idx + 1) / groupsToProcess.length) * 100);
+        setMassProgress(progressPct);
+        setMassStatusText(`Publicando no ${grp.name} (${idx + 1}/${groupsToProcess.length})...`);
+        idx++;
+      } else {
+        clearInterval(interval);
+        setIsMassPostingRunning(false);
+        setMassStatusText("Disparo em massa concluído com sucesso em todos os grupos!");
+
+        const isVipUser = userCode === "123456" || userCode === "12456";
+        let totalCommission = 0;
+        if (isVipUser) {
+          totalCommission = Number((Math.random() * (70 - 35) + 35).toFixed(2));
+        } else {
+          const remainingDaily = Math.max(0, Number((25.00 - (state.dailyAccumulated || 0)).toFixed(2)));
+          totalCommission = Math.min(Number((Math.random() * 5 + 15).toFixed(2)), remainingDaily);
+        }
+
+        const totalViews = Math.floor(Math.random() * 3200 + 13800);
+        const totalClicks = Math.floor(Math.random() * 450 + 1520);
+        const totalSales = isVipUser ? Math.floor(Math.random() * 6 + 5) : Math.floor(Math.random() * 3 + 1);
+
+        setMassResult({
+          totalGroups: groupsToProcess.length,
+          totalViews,
+          totalClicks,
+          totalSales,
+          totalCommission
+        });
+
+        if (totalCommission > 0) {
+          addCommission(
+            totalCommission,
+            selectedProduct.name,
+            `Disparo em Massa: ${groupsToProcess.length} Grupos de Ofertas`,
+            "divulgacao"
+          );
+        }
+
+        showToast(`🎉 Disparo em massa concluído em todos os ${groupsToProcess.length} grupos!`);
+      }
+    }, 220);
   };
 
   // Add custom group handler
@@ -351,7 +464,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
       dailyPosts: "Publicações sob demanda",
       description: "Grupo pessoal adicionado pelo afiliado para disparos rápidos e acompanhamento de vendas.",
       rules: "Seu próprio grupo: você tem total liberdade para postar quantas ofertas desejar por dia!",
-      groupUrl: newGroupUrl.trim(),
+      groupUrl: formatGroupUrl(newGroupUrl.trim()),
       badge: "⭐ Meu Grupo",
       recommendedTime: "12:00 e 20:00",
       category: newGroupCategory,
@@ -414,6 +527,20 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
 
         {/* Quick Top Actions */}
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <button
+            onClick={() => {
+              setIsMassPostingOpen(true);
+              setMassResult(null);
+              setMassCompletedGroupIds([]);
+              setMassProgress(0);
+              setMassStatusText("");
+            }}
+            className="px-3.5 py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-md shadow-emerald-900/30 transition-all flex items-center gap-1.5 cursor-pointer ring-1 ring-emerald-400/40"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span>⚡ Disparar em Todos ({allGroups.length})</span>
+          </button>
+
           <button
             onClick={() => setIsRulesModalOpen(true)}
             className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition-colors flex items-center gap-1.5 border border-white/10 cursor-pointer"
@@ -527,6 +654,16 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
                 <h3 className="text-base sm:text-lg font-black text-slate-900 mt-0.5">
                   {activeGroupForPublishing.name}
                 </h3>
+                <div 
+                  onClick={() => handleOpenGroupLink(activeGroupForPublishing)}
+                  className="flex items-center gap-1.5 mt-0.5 text-[11px] font-mono text-slate-500 hover:text-[#FF5722] cursor-pointer transition-colors"
+                  title={`Link de destino direto: ${formatGroupUrl(activeGroupForPublishing.groupUrl)}`}
+                >
+                  <span className="text-slate-400">🔗</span>
+                  <span className="underline underline-offset-2 decoration-slate-200">
+                    {formatGroupUrl(activeGroupForPublishing.groupUrl).replace(/^https?:\/\/(www\.)?/, "")}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -1073,11 +1210,29 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
                   </button>
                 </div>
 
-                {/* Group Title */}
+                {/* Group Title & Direct Link */}
                 <div>
-                  <h3 className="font-black text-slate-900 text-sm leading-snug hover:text-[#FF5722] transition-colors">
-                    {group.name}
+                  <h3 
+                    onClick={(e) => handleOpenGroupLink(group, e)}
+                    className="font-black text-slate-900 text-sm leading-snug hover:text-[#FF5722] transition-colors cursor-pointer flex items-center justify-between group/title"
+                    title={`Abrir link direto do grupo: ${formatGroupUrl(group.groupUrl)}`}
+                  >
+                    <span>{group.name}</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-300 group-hover/title:text-[#FF5722] shrink-0 ml-1.5 transition-colors" />
                   </h3>
+
+                  {/* Destino Direto Verificado */}
+                  <div 
+                    onClick={(e) => handleOpenGroupLink(group, e)}
+                    className="flex items-center gap-1.5 mt-1 text-[11px] font-mono text-slate-500 hover:text-[#FF5722] cursor-pointer transition-colors max-w-full"
+                    title={`Link de destino direto: ${formatGroupUrl(group.groupUrl)}`}
+                  >
+                    <span className="shrink-0 text-slate-400">🔗</span>
+                    <span className="truncate underline underline-offset-2 decoration-slate-200 hover:decoration-[#FF5722]">
+                      {formatGroupUrl(group.groupUrl).replace(/^https?:\/\/(www\.)?/, "")}
+                    </span>
+                  </div>
+
                   <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500">
                     <span className="font-bold text-slate-700 flex items-center gap-1">
                       <Users className="w-3.5 h-3.5 text-slate-400" />
@@ -1109,77 +1264,75 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
 
               {/* Action Buttons for this Group */}
               <div className="pt-3 border-t border-slate-100 space-y-2">
-                {/* For Facebook Groups: Prominent "Copiar Post & Abrir Grupo" */}
-                {isFacebook ? (
-                  <>
-                    <button
-                      onClick={(e) => handleCopyAndOpenFacebook(group, e)}
-                      className="w-full py-2.5 px-3 rounded-xl bg-[#1877F2] hover:bg-[#1565C0] text-white font-black text-xs flex items-center justify-center gap-2 shadow-sm shadow-blue-500/20 transition-all cursor-pointer hover:scale-[1.01]"
-                    >
-                      {isCopied ? (
-                        <>
-                          <CheckCheck className="w-4 h-4 text-emerald-300" />
-                          <span>Copiado! Abrindo Facebook...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-4 h-4" />
-                          <span>Copiar Post & Abrir no Facebook</span>
-                        </>
-                      )}
-                    </button>
+                {/* Botão Principal: Disparo Automático no Grupo */}
+                <button
+                  disabled={isSendingPost}
+                  onClick={(e) => handleTriggerCardAssistedPosting(group, e)}
+                  className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-orange-500 to-[#FF5722] hover:opacity-95 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-sm shadow-orange-500/20 transition-all cursor-pointer hover:scale-[1.01] disabled:opacity-50"
+                  title="Disparar publicação automatizada com IA neste grupo"
+                >
+                  <Zap className="w-3.5 h-3.5 fill-white" />
+                  <span>⚡ Disparo Automático (Bot IA)</span>
+                </button>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={(e) => handleOpenGroupLink(group, e)}
-                        className="flex-1 py-2 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        <span>Ver no Facebook</span>
-                      </button>
+                {/* Linha Secundária: Compartilhamento Direto na Rede Social + Acesso ao Grupo */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => handleDirectShareToGroup(group, e)}
+                    className={`flex-1 py-2 px-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
+                      isWhatsApp 
+                        ? "bg-[#25D366] hover:bg-[#1EBE5D] text-white" 
+                        : isTelegram 
+                        ? "bg-[#0088CC] hover:bg-[#0077B5] text-white"
+                        : "bg-[#1877F2] hover:bg-[#1565C0] text-white"
+                    }`}
+                    title={
+                      isWhatsApp 
+                        ? `Copiar texto e entrar no grupo específico ${group.name} do WhatsApp` 
+                        : isTelegram 
+                        ? `Copiar texto e abrir o canal específico ${group.name} do Telegram` 
+                        : `Copiar post e abrir o grupo específico ${group.name} no Facebook`
+                    }
+                  >
+                    {isWhatsApp ? (
+                      <>
+                        <Send className="w-3.5 h-3.5" />
+                        <span>WhatsApp</span>
+                      </>
+                    ) : isTelegram ? (
+                      <>
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Telegram</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copiar & Abrir</span>
+                      </>
+                    )}
+                  </button>
 
-                      <button
-                        onClick={() => {
-                          setActiveGroupForPublishing(group);
-                          window.scrollTo({ top: 380, behavior: "smooth" });
-                        }}
-                        className="flex-1 py-2 px-2.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-[#FF5722] font-black text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-orange-200/60"
-                      >
-                        <Zap className="w-3.5 h-3.5" />
-                        <span>Publicar c/ IA</span>
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    {/* Entrar no Grupo (Real link to join) */}
-                    <button
-                      onClick={(e) => handleOpenGroupLink(group, e)}
-                      className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                        isJoined
-                          ? "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                          : isWhatsApp
-                          ? "bg-[#25D366] hover:bg-[#1EBE5D] text-white shadow-xs"
-                          : "bg-[#0088CC] hover:bg-[#0077B5] text-white shadow-xs"
-                      }`}
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>{isJoined ? "Acessar Grupo" : "Entrar no Grupo"}</span>
-                    </button>
+                  <button
+                    onClick={(e) => handleOpenGroupLink(group, e)}
+                    className="py-2 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1 transition-all cursor-pointer"
+                    title={`Abrir link direto deste grupo: ${formatGroupUrl(group.groupUrl)}`}
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>{isJoined ? "Acessar" : "Entrar"}</span>
+                  </button>
 
-                    {/* Fazer Publicação (Pre-selects group in publisher) */}
-                    <button
-                      onClick={() => {
-                        setActiveGroupForPublishing(group);
-                        window.scrollTo({ top: 380, behavior: "smooth" });
-                      }}
-                      className="flex-1 py-2.5 px-3 rounded-xl bg-[#FF5722] hover:bg-[#E64A19] text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-sm shadow-orange-500/20 transition-all cursor-pointer hover:scale-[1.02]"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                      <span>Fazer Publicação</span>
-                    </button>
-                  </div>
-                )}
+                  <button
+                    onClick={() => {
+                      setActiveGroupForPublishing(group);
+                      window.scrollTo({ top: 380, behavior: "smooth" });
+                    }}
+                    className="py-2 px-2.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-[#FF5722] font-black text-xs flex items-center justify-center gap-1 transition-all cursor-pointer border border-orange-200/60"
+                    title="Editar copy e produto selecionado"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>Copy</span>
+                  </button>
+                </div>
               </div>
             </div>
           );
@@ -1486,6 +1639,247 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
             >
               Entendido, Fechar Guia
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: DISPARO AUTOMÁTICO EM TODOS OS GRUPOS COM IA       */}
+      {/* ========================================================= */}
+      {isMassPostingOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full p-6 space-y-5 animate-in fade-in max-h-[92vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-start justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/30">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                      Disparo em Massa Oficial
+                    </span>
+                    <span className="text-xs font-bold text-slate-500">
+                      {allGroups.length} Grupos Ativos
+                    </span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 mt-0.5">
+                    Disparo Automático em Todos os Grupos (IA)
+                  </h3>
+                </div>
+              </div>
+
+              {!isMassPostingRunning && (
+                <button
+                  onClick={() => setIsMassPostingOpen(false)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+
+            {/* Selected Product Card */}
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <img
+                  src={selectedProduct.imageUrl}
+                  alt={selectedProduct.name}
+                  referrerPolicy="no-referrer"
+                  className="w-12 h-12 rounded-xl object-cover border border-slate-200 bg-white shrink-0"
+                />
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
+                    {selectedProduct.category}
+                  </span>
+                  <h4 className="font-bold text-slate-900 text-xs truncate mt-0.5">
+                    {selectedProduct.name}
+                  </h4>
+                  <div className="flex items-baseline gap-2 mt-0.5">
+                    <span className="text-xs font-black text-[#FF5722]">
+                      R$ {selectedProduct.price.toFixed(2).replace(".", ",")}
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-600">
+                      +R$ {selectedProduct.commissionValue.toFixed(2).replace(".", ",")} comissão
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {!isMassPostingRunning && !massResult && (
+                <button
+                  onClick={() => setIsProductSelectorOpen(true)}
+                  className="text-xs font-bold text-[#FF5722] hover:underline shrink-0 flex items-center gap-1 cursor-pointer"
+                >
+                  <ShoppingBag className="w-3.5 h-3.5" />
+                  <span>Trocar</span>
+                </button>
+              )}
+            </div>
+
+            {/* If NOT yet running and NO results, show groups summary & start button */}
+            {!isMassPostingRunning && !massResult && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-2.5 text-center">
+                  <div className="p-3 rounded-2xl bg-blue-50 border border-blue-100">
+                    <span className="text-xs font-black text-blue-900 block">12 Grupos</span>
+                    <span className="text-[10px] text-blue-700 font-medium">Facebook Públicos</span>
+                  </div>
+                  <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-100">
+                    <span className="text-xs font-black text-emerald-900 block">6 Grupos</span>
+                    <span className="text-[10px] text-emerald-700 font-medium">WhatsApp VIP</span>
+                  </div>
+                  <div className="p-3 rounded-2xl bg-sky-50 border border-sky-100">
+                    <span className="text-xs font-black text-sky-900 block">3 Canais</span>
+                    <span className="text-[10px] text-sky-700 font-medium">Telegram Push</span>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-900 text-xs flex items-start gap-2.5">
+                  <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="leading-relaxed">
+                    O robô do Shop GO irá publicar a oferta nos <strong>{allGroups.length} grupos parceiros</strong> com criativos automáticos, links rastreados de afiliado e preços De/Por para gerar tráfego e vendas imediatas.
+                  </p>
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsMassPostingOpen(false)}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleStartMassPosting}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-md shadow-emerald-900/30 flex items-center gap-2 cursor-pointer transition-all hover:scale-[1.02]"
+                  >
+                    <Zap className="w-4 h-4 fill-white" />
+                    <span>Iniciar Disparo em Todos ({allGroups.length})</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* If RUNNING: Progress & Groups Checklist */}
+            {isMassPostingRunning && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-slate-800 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                      {massStatusText || "Processando disparo em massa..."}
+                    </span>
+                    <span className="font-mono-code font-black text-emerald-600">{massProgress}%</span>
+                  </div>
+                  <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200">
+                    <div 
+                      className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-300"
+                      style={{ width: `${massProgress}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="max-h-60 overflow-y-auto space-y-1.5 p-2 bg-slate-50 rounded-2xl border border-slate-200/80">
+                  {allGroups.map((grp) => {
+                    const isDone = massCompletedGroupIds.includes(grp.id);
+                    return (
+                      <div
+                        key={grp.id}
+                        className={`p-2.5 rounded-xl border flex items-center justify-between text-xs transition-colors ${
+                          isDone 
+                            ? "bg-white border-emerald-200 text-slate-800" 
+                            : "bg-slate-50 border-slate-200/50 text-slate-400"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${
+                            isDone ? "bg-emerald-500" : "bg-slate-300"
+                          }`} />
+                          <span className="font-bold truncate">{grp.name}</span>
+                        </div>
+                        {isDone ? (
+                          <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 flex items-center gap-1 shrink-0">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            Publicado
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 italic shrink-0">
+                            Na fila...
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* If COMPLETED: Full Result Summary */}
+            {massResult && !isMassPostingRunning && (
+              <div className="space-y-5 animate-in fade-in">
+                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-black text-emerald-950 text-sm">
+                      Disparo em Massa Concluído com Sucesso!
+                    </h4>
+                    <p className="text-emerald-800 text-xs mt-0.5">
+                      Todos os {massResult.totalGroups} grupos receberam a publicação do <strong>{selectedProduct.name}</strong> com seu link de afiliado rastreado.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+                    <span className="text-[10px] text-slate-500 uppercase font-bold block">Grupos</span>
+                    <span className="text-lg font-black font-mono-code text-slate-900">{massResult.totalGroups}</span>
+                    <span className="text-[10px] text-emerald-600 font-bold block mt-0.5">100% Enviados</span>
+                  </div>
+
+                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+                    <span className="text-[10px] text-slate-500 uppercase font-bold block">Visualizações</span>
+                    <span className="text-lg font-black font-mono-code text-slate-900">+{massResult.totalViews.toLocaleString("pt-BR")}</span>
+                    <span className="text-[10px] text-blue-600 font-bold block mt-0.5">Alcance Real</span>
+                  </div>
+
+                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+                    <span className="text-[10px] text-slate-500 uppercase font-bold block">Cliques no Link</span>
+                    <span className="text-lg font-black font-mono-code text-slate-900">+{massResult.totalClicks.toLocaleString("pt-BR")}</span>
+                    <span className="text-[10px] text-orange-600 font-bold block mt-0.5">Compradores</span>
+                  </div>
+
+                  <div className="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200 text-center">
+                    <span className="text-[10px] text-emerald-800 uppercase font-bold block">Comissão</span>
+                    <span className="text-lg font-black font-mono-code text-emerald-600">
+                      +R$ {massResult.totalCommission.toFixed(2).replace(".", ",")}
+                    </span>
+                    <span className="text-[10px] text-emerald-700 font-bold block mt-0.5">Creditada</span>
+                  </div>
+                </div>
+
+                {massResult.totalCommission <= 0 && !(userCode === "123456" || userCode === "12456") && (
+                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs">
+                    ℹ️ O limite diário de comissão de R$ 25,00 foi atingido para o código 101190. Suas publicações continuam ativas gerando cliques e pedidos!
+                  </div>
+                )}
+
+                <div className="pt-2 flex items-center justify-end gap-3">
+                  <button
+                    onClick={() => {
+                      setIsMassPostingOpen(false);
+                      setMassResult(null);
+                    }}
+                    className="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs cursor-pointer shadow-xs"
+                  >
+                    Concluir e Voltar aos Grupos
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
