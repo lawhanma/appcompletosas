@@ -28,7 +28,16 @@ type PeriodFilter = "hoje" | "ontem" | "7dias" | "mes";
 type ChartMetric = "faturamento" | "comissoes" | "pedidos";
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) => {
-  const { state, isVip, userCode: _userCode, simulateLiveSale: _simulateLiveSale, releaseDeliveredSale } = useFinancial();
+  const { 
+    state, 
+    isVip, 
+    isWarmupPhase, 
+    warmupHoursRemaining, 
+    fastForwardWarmup, 
+    userCode: _userCode, 
+    simulateLiveSale: _simulateLiveSale, 
+    releaseDeliveredSale 
+  } = useFinancial();
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodFilter>("hoje");
   const [selectedMetric, setSelectedMetric] = useState<ChartMetric>("faturamento");
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -42,42 +51,46 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
     }, 500);
   };
 
-  // Metrics based on selected period
+  // Metrics based on selected period (zeros during 5h warmup for standard code 101190)
   const displayFaturamento = useMemo(() => {
+    if (isWarmupPhase) return 0.00;
     if (selectedPeriod === "hoje") return state.faturamentoDiario;
-    if (selectedPeriod === "ontem") return isVip ? 2840.00 : 160.00;
-    if (selectedPeriod === "7dias") return isVip ? 18650.00 : 920.00;
+    if (selectedPeriod === "ontem") return isVip ? 2840.00 : 30.00;
+    if (selectedPeriod === "7dias") return isVip ? 18650.00 : 180.00;
     return state.faturamentoMes;
-  }, [selectedPeriod, state.faturamentoDiario, state.faturamentoMes, isVip]);
+  }, [selectedPeriod, state.faturamentoDiario, state.faturamentoMes, isVip, isWarmupPhase]);
 
   const displayComissoes = useMemo(() => {
+    if (isWarmupPhase) return 0.00;
     const totalComissao = state.saldoDisponivel + state.saldoPendente;
     if (selectedPeriod === "hoje") return totalComissao;
-    if (selectedPeriod === "ontem") return isVip ? 426.00 : 28.50;
-    if (selectedPeriod === "7dias") return isVip ? 2790.00 : 175.00;
-    return isVip ? 15370.50 : 380.00;
-  }, [selectedPeriod, state.saldoDisponivel, state.saldoPendente, isVip]);
+    if (selectedPeriod === "ontem") return isVip ? 426.00 : 30.00;
+    if (selectedPeriod === "7dias") return isVip ? 2790.00 : 120.00;
+    return isVip ? 15370.50 : 210.00;
+  }, [selectedPeriod, state.saldoDisponivel, state.saldoPendente, isVip, isWarmupPhase]);
 
   const displayPedidos = useMemo(() => {
+    if (isWarmupPhase) return 0;
     if (selectedPeriod === "hoje") return state.pedidosHoje;
     if (selectedPeriod === "ontem") return isVip ? 36 : 3;
-    if (selectedPeriod === "7dias") return isVip ? 245 : 18;
+    if (selectedPeriod === "7dias") return isVip ? 245 : 12;
     return state.vendasRealizadas;
-  }, [selectedPeriod, state.pedidosHoje, state.vendasRealizadas, isVip]);
+  }, [selectedPeriod, state.pedidosHoje, state.vendasRealizadas, isVip, isWarmupPhase]);
 
   // Hourly curve for chart (00h, 04h, 08h, 12h, 16h, 20h, 23h)
   const chartData = useMemo(() => {
-    const faturamentoNow = state.faturamentoDiario;
+    const faturamentoNow = isWarmupPhase ? 0 : state.faturamentoDiario;
+    const pedidosNow = isWarmupPhase ? 0 : state.pedidosHoje;
     return [
-      { hour: "00:00", faturamento: faturamentoNow * 0.05, comissoes: (faturamentoNow * 0.05) * 0.15, pedidos: Math.max(1, Math.round(state.pedidosHoje * 0.05)) },
-      { hour: "04:00", faturamento: faturamentoNow * 0.08, comissoes: (faturamentoNow * 0.08) * 0.15, pedidos: Math.max(1, Math.round(state.pedidosHoje * 0.08)) },
-      { hour: "08:00", faturamento: faturamentoNow * 0.24, comissoes: (faturamentoNow * 0.24) * 0.15, pedidos: Math.max(2, Math.round(state.pedidosHoje * 0.24)) },
-      { hour: "12:00", faturamento: faturamentoNow * 0.49, comissoes: (faturamentoNow * 0.49) * 0.15, pedidos: Math.max(6, Math.round(state.pedidosHoje * 0.49)) },
-      { hour: "16:00", faturamento: faturamentoNow * 0.75, comissoes: (faturamentoNow * 0.75) * 0.15, pedidos: Math.max(14, Math.round(state.pedidosHoje * 0.75)) },
-      { hour: "20:00", faturamento: faturamentoNow * 0.91, comissoes: (faturamentoNow * 0.91) * 0.15, pedidos: Math.max(20, Math.round(state.pedidosHoje * 0.91)) },
-      { hour: "23:59", faturamento: faturamentoNow, comissoes: faturamentoNow * 0.15, pedidos: state.pedidosHoje }
+      { hour: "00:00", faturamento: faturamentoNow * 0.05, comissoes: (faturamentoNow * 0.05) * 0.15, pedidos: faturamentoNow === 0 ? 0 : Math.round(pedidosNow * 0.05) },
+      { hour: "04:00", faturamento: faturamentoNow * 0.08, comissoes: (faturamentoNow * 0.08) * 0.15, pedidos: faturamentoNow === 0 ? 0 : Math.round(pedidosNow * 0.08) },
+      { hour: "08:00", faturamento: faturamentoNow * 0.24, comissoes: (faturamentoNow * 0.24) * 0.15, pedidos: faturamentoNow === 0 ? 0 : Math.round(pedidosNow * 0.24) },
+      { hour: "12:00", faturamento: faturamentoNow * 0.49, comissoes: (faturamentoNow * 0.49) * 0.15, pedidos: faturamentoNow === 0 ? 0 : Math.round(pedidosNow * 0.49) },
+      { hour: "16:00", faturamento: faturamentoNow * 0.75, comissoes: (faturamentoNow * 0.75) * 0.15, pedidos: faturamentoNow === 0 ? 0 : Math.round(pedidosNow * 0.75) },
+      { hour: "20:00", faturamento: faturamentoNow * 0.91, comissoes: (faturamentoNow * 0.91) * 0.15, pedidos: faturamentoNow === 0 ? 0 : Math.round(pedidosNow * 0.91) },
+      { hour: "23:59", faturamento: faturamentoNow, comissoes: faturamentoNow * 0.15, pedidos: pedidosNow }
     ];
-  }, [state.faturamentoDiario, state.pedidosHoje]);
+  }, [state.faturamentoDiario, state.pedidosHoje, isWarmupPhase]);
 
   // SVG Chart path calculation
   const maxChartVal = useMemo(() => {
@@ -236,6 +249,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
           </button>
         </div>
       </div>
+
+      {/* Warmup Phase Notice for Code 101190 */}
+      {isWarmupPhase && (
+        <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+              <Clock className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-amber-900 uppercase tracking-wide">
+                  Conta em Período de Aquecimento IA (Primeiras 5 Horas)
+                </span>
+                <span className="px-1.5 py-0.2 rounded bg-amber-200 text-amber-900 text-[10px] font-mono-code font-bold">
+                  Restam ~{warmupHoursRemaining}h
+                </span>
+              </div>
+              <p className="text-xs text-amber-800 mt-0.5 leading-relaxed">
+                Código 101190: para garantir conformidade e indexação natural de tráfego, as vendas e o saldo (até R$ 30,00 por dia) começarão a entrar na dashboard após 5 horas do seu primeiro acesso.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={fastForwardWarmup}
+            className="px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shrink-0 cursor-pointer transition-colors shadow-2xs"
+            title="Acelerar 5 horas para testar a entrada de saldo e vendas imediatamente"
+          >
+            Avançar 5 Horas (Teste) ⚡
+          </button>
+        </div>
+      )}
 
       {/* 4 Core High-Impact KPI Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

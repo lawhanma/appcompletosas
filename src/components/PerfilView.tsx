@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useFinancial } from "../context/FinancialContext";
+import { internalDb } from "../utils/internalDb";
 import { 
   User, 
   Mail, 
@@ -115,15 +116,29 @@ export const PerfilView: React.FC = () => {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    const cleanName = sanitizeClean(name);
+    const cleanPhone = sanitizeClean(phone);
+    const cleanPix = sanitizeClean(pixKey);
+
     try {
       localStorage.setItem("shopnext_profile_custom", JSON.stringify({ 
-        name: sanitizeClean(name), 
-        phone: sanitizeClean(phone), 
-        pixKey: sanitizeClean(pixKey) 
+        name: cleanName, 
+        phone: cleanPhone, 
+        pixKey: cleanPix 
       }));
     } catch (e) {
       // ignore
     }
+
+    // Persiste no Banco de Dados Interno multi-camadas (IndexedDB + LocalStorage) garantindo integridade dos dados do lead
+    if (loginEmail) {
+      internalDb.updateLeadProfile(loginEmail, {
+        name: cleanName,
+        phone: cleanPhone,
+        pixKey: cleanPix
+      });
+    }
+
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -137,6 +152,15 @@ export const PerfilView: React.FC = () => {
     } catch (e) {
       // ignore
     }
+
+    if (loginEmail) {
+      internalDb.updateLeadProfile(loginEmail, {
+        name: "",
+        phone: "",
+        pixKey: ""
+      });
+    }
+
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };
@@ -165,7 +189,7 @@ export const PerfilView: React.FC = () => {
           <p className="text-xs text-slate-300 mt-1 max-w-md leading-relaxed">
             {isVip 
               ? "Geração de vídeos, disparos automáticos com comissão de R$ 20 a R$ 70 por divulgação e meta diária de até R$ 3.000,00."
-              : "Automação de divulgação em redes sociais parceiras com limite diário de até R$ 25,00 por dia de comissão."
+              : "Automação de divulgação em redes sociais parceiras com limite diário de até R$ 30,00 por dia de vendas (após o período de 5h de aquecimento inicial da IA)."
             }
           </p>
         </div>

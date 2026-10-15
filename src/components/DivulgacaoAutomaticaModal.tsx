@@ -23,6 +23,9 @@ import {
   Loader2,
   AlertCircle
 } from "lucide-react";
+import { useShopeeAffiliation } from "../utils/useShopeeAffiliation";
+import { AffiliationLoadingModal } from "./AffiliationLoadingModal";
+import { getWorkingShopeeUrl } from "../utils/shopee";
 
 interface DivulgacaoAutomaticaModalProps {
   product: Product | null;
@@ -55,7 +58,19 @@ export const DivulgacaoAutomaticaModal: React.FC<DivulgacaoAutomaticaModalProps>
   onNavigateToFinancial
 }) => {
   const { addCommission, userCode, state } = useFinancial();
+  const { isAffiliated, markProductAsAffiliated } = useShopeeAffiliation();
+  const [isAffiliationLoadingOpen, setIsAffiliationLoadingOpen] = useState(false);
+
   if (!isOpen || !product) return null;
+
+  const productAffiliated = isAffiliated(product.id);
+
+  const handleCompleteAffiliation = () => {
+    markProductAsAffiliated(product.id);
+    setIsAffiliationLoadingOpen(false);
+    const targetUrl = getWorkingShopeeUrl(product);
+    window.open(targetUrl, "_blank", "noopener,noreferrer");
+  };
 
   // Workflow phases: "idle" | "loading" | "posting" | "results"
   const [phase, setPhase] = useState<"idle" | "loading" | "posting" | "results">("idle");
@@ -414,10 +429,42 @@ export const DivulgacaoAutomaticaModal: React.FC<DivulgacaoAutomaticaModalProps>
             </div>
           </div>
 
-          {/* ========================================================= */}
-          {/* STATE 1: IDLE (Pre-launch screen)                         */}
-          {/* ========================================================= */}
-          {phase === "idle" && (
+          {/* BARREIRA DE AFILIAÇÃO OBRIGATÓRIA */}
+          {!productAffiliated ? (
+            <div className="p-8 rounded-3xl bg-red-50/80 border border-red-200 text-center space-y-4 max-w-lg mx-auto my-6 animate-in zoom-in-95">
+              <div className="w-16 h-16 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mx-auto border border-red-200">
+                <AlertCircle className="w-8 h-8" />
+              </div>
+              <div>
+                <span className="inline-block px-2.5 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-bold uppercase tracking-wider mb-1">
+                  AFILIAÇÃO OBRIGATÓRIA
+                </span>
+                <h3 className="text-lg font-bold text-slate-900 font-display">
+                  Você precisa se afiliar a este produto primeiro!
+                </h3>
+                <p className="text-xs text-slate-600 mt-1 max-w-sm mx-auto leading-relaxed">
+                  Para realizar a divulgação automática nas 6 redes sociais e faturar comissões no seu saldo, é obrigatório ativar a afiliação na Shopee.
+                </p>
+              </div>
+
+              <div className="pt-2 flex flex-col sm:flex-row gap-2.5 justify-center">
+                <button
+                  type="button"
+                  onClick={() => setIsAffiliationLoadingOpen(true)}
+                  className="py-3 px-6 rounded-xl bg-[#EE4D2D] hover:bg-[#E03A17] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 cursor-pointer transition-all active:scale-[0.99]"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>SE AFILIAR A ESTE PRODUTO AGORA</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* ========================================================= */}
+              {/* STATE 1: IDLE (Pre-launch screen)                         */}
+              {/* ========================================================= */}
+              {phase === "idle" && (
             <div className="space-y-6">
               {/* AI Code Automation Banner */}
               <div className="relative rounded-2xl overflow-hidden border border-emerald-200/80 shadow-xs bg-slate-950 text-white p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -794,8 +841,19 @@ export const DivulgacaoAutomaticaModal: React.FC<DivulgacaoAutomaticaModalProps>
               </div>
             </div>
           )}
+            </>
+          )}
         </div>
       </div>
+
+      {isAffiliationLoadingOpen && (
+        <AffiliationLoadingModal
+          product={product}
+          isOpen={isAffiliationLoadingOpen}
+          onComplete={handleCompleteAffiliation}
+          onClose={() => setIsAffiliationLoadingOpen(false)}
+        />
+      )}
     </div>
   );
 };

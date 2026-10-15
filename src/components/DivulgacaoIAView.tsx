@@ -12,8 +12,14 @@ import {
   Package,
   Clock,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  AlertCircle,
+  ArrowRight,
+  ShieldCheck
 } from "lucide-react";
+import { useShopeeAffiliation } from "../utils/useShopeeAffiliation";
+import { AffiliationLoadingModal } from "./AffiliationLoadingModal";
+import { getWorkingShopeeUrl } from "../utils/shopee";
 
 interface DivulgacaoIAViewProps {
   initialProduct?: Product | null;
@@ -27,6 +33,8 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
   defaultSubTab = "automatica"
 }) => {
   const { state, userCode, addCommission, consumeAiCredit } = useFinancial();
+  const { isAffiliated, markProductAsAffiliated } = useShopeeAffiliation();
+
   const [subTab, setSubTab] = useState<"automatica" | "grupos" | "tiktok">(defaultSubTab);
 
   useEffect(() => {
@@ -42,6 +50,28 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
 
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("Todos");
+
+  // Affiliation modal states
+  const [showAffiliationRequiredModal, setShowAffiliationRequiredModal] = useState(false);
+  const [isAffiliationLoadingOpen, setIsAffiliationLoadingOpen] = useState(false);
+  const [productToAffiliate, setProductToAffiliate] = useState<Product | null>(null);
+
+  const handleStartAffiliateProduct = (product: Product) => {
+    setProductToAffiliate(product);
+    setIsAffiliationLoadingOpen(true);
+    setShowAffiliationRequiredModal(false);
+  };
+
+  const handleCompleteAffiliation = () => {
+    if (productToAffiliate) {
+      markProductAsAffiliated(productToAffiliate.id);
+      const targetUrl = getWorkingShopeeUrl(productToAffiliate);
+      window.open(targetUrl, "_blank", "noopener,noreferrer");
+      setToastMessage(`Afiliação aprovada com sucesso para ${productToAffiliate.name}!`);
+      setTimeout(() => setToastMessage(null), 3500);
+    }
+    setIsAffiliationLoadingOpen(false);
+  };
 
   // Multi-platform posting animation state
   const [isPosting, setIsPosting] = useState(false);
@@ -106,6 +136,13 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
 
   // Run Automated Posting Simulation (~30s realistic sequential process)
   const handleStartAutoPosting = () => {
+    // Validação obrigatória de afiliação na Shopee
+    if (!isAffiliated(selectedProduct.id)) {
+      setProductToAffiliate(selectedProduct);
+      setShowAffiliationRequiredModal(true);
+      return;
+    }
+
     if (state.aiCredits <= 0) {
       alert("Seus 4 créditos diários de IA foram utilizados. Eles renovam à meia-noite!");
       return;
@@ -366,9 +403,22 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
 
             {/* Card: PRODUTO SELECIONADO */}
             <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-xs space-y-3">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                <Package className="w-3.5 h-3.5 text-slate-400" />
-                <span>PRODUTO SELECIONADO</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <Package className="w-3.5 h-3.5 text-slate-400" />
+                  <span>PRODUTO SELECIONADO</span>
+                </div>
+                {isAffiliated(selectedProduct.id) ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-semibold border border-emerald-200">
+                    <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                    Afiliado
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-semibold border border-amber-200">
+                    <AlertCircle className="w-3 h-3 text-amber-600" />
+                    Não Afiliado
+                  </span>
+                )}
               </div>
 
               <div className="flex items-start gap-3 p-2.5 rounded-lg bg-slate-50 border border-slate-200/60">
@@ -382,11 +432,44 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
                   <h4 className="font-medium text-slate-900 text-xs leading-snug line-clamp-2">
                     {selectedProduct.name}
                   </h4>
-                  <div className="text-sm font-mono-code font-bold text-[#EE4D2D] mt-1">
-                    R$ {selectedProduct.price.toFixed(2).replace(".", ",")}
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-sm font-mono-code font-bold text-[#EE4D2D]">
+                      R$ {selectedProduct.price.toFixed(2).replace(".", ",")}
+                    </span>
+                    <span className="text-[11px] text-emerald-700 font-medium">
+                      +R$ {selectedProduct.commissionValue.toFixed(2).replace(".", ",")} comissão
+                    </span>
                   </div>
                 </div>
               </div>
+
+              {/* Status Banner when not affiliated */}
+              {!isAffiliated(selectedProduct.id) ? (
+                <div className="p-3 bg-red-50/80 border border-red-200/80 rounded-xl space-y-2">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-red-900">
+                    <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                    <span>Afiliação Obrigatória Necessária</span>
+                  </div>
+                  <p className="text-[11px] text-red-700 leading-snug">
+                    Para divulgar automaticamente e computar vendas, você precisa se afiliar a este item na Shopee.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleStartAffiliateProduct(selectedProduct)}
+                    className="w-full py-2 px-3 rounded-lg bg-[#EE4D2D] hover:bg-[#E03A17] text-white font-medium text-xs flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-colors active:scale-[0.99]"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Se Afiliar a este Produto Agora</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="p-2.5 bg-emerald-50/60 border border-emerald-200/60 rounded-xl flex items-center gap-2 text-xs text-emerald-800">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="text-[11px] font-medium">
+                    Produto pronto e autorizado para disparo nas 6 redes com link rastreado!
+                  </span>
+                </div>
+              )}
 
               <p className="text-xs text-slate-500 italic px-0.5 leading-relaxed">
                 "{selectedProduct.description || `${selectedProduct.name} de alta conversão, qualidade premium e entrega rápida garantida na Shopee.`}"
@@ -651,6 +734,8 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[380px] overflow-y-auto pr-1">
                   {filteredProducts.map((product) => {
                     const isSelected = selectedProduct.id === product.id;
+                    const productAffiliated = isAffiliated(product.id);
+
                     return (
                       <div
                         key={product.id}
@@ -672,8 +757,15 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
                             <h4 className="font-medium text-slate-900 text-xs truncate leading-snug">
                               {product.name}
                             </h4>
-                            <div className="text-xs font-mono-code font-bold text-[#EE4D2D] mt-0.5">
-                              R$ {product.price.toFixed(2).replace(".", ",")}
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-xs font-mono-code font-bold text-[#EE4D2D]">
+                                R$ {product.price.toFixed(2).replace(".", ",")}
+                              </span>
+                              {!productAffiliated && (
+                                <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800">
+                                  Não Afiliado
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -751,6 +843,88 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
             </button>
           </div>
         </div>
+      )}
+
+      {/* MODAL DE ERRO: PRODUTO NÃO AFILIADO NA DIVULGAÇÃO AUTOMÁTICA */}
+      {showAffiliationRequiredModal && productToAffiliate && (
+        <div 
+          className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-150"
+          onClick={() => setShowAffiliationRequiredModal(false)}
+        >
+          <div 
+            className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-red-200 overflow-hidden p-6 space-y-4 animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto border border-red-100">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <span className="inline-block px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold tracking-wider uppercase mb-1">
+                  AFILIAÇÃO OBRIGATÓRIA
+                </span>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 font-display">
+                  Você precisa se afiliar a este produto primeiro!
+                </h3>
+                <p className="text-xs text-slate-600 max-w-sm mx-auto mt-1 leading-relaxed">
+                  Para fazer a divulgação automática nas 6 redes sociais e receber as comissões no seu saldo, você deve se afiliar a este produto na Shopee.
+                </p>
+              </div>
+            </div>
+
+            {/* Product card recap */}
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 overflow-hidden shrink-0">
+                <img 
+                  src={productToAffiliate.imageUrl} 
+                  alt={productToAffiliate.name}
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover" 
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-semibold text-slate-900 truncate">
+                  {productToAffiliate.name}
+                </div>
+                <div className="text-[11px] text-slate-500">
+                  Comissão: <strong className="text-emerald-700">{productToAffiliate.commissionRate}%</strong> (R$ {productToAffiliate.commissionValue.toFixed(2).replace(".", ",")}/venda)
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
+                onClick={() => handleStartAffiliateProduct(productToAffiliate)}
+                className="w-full py-3 px-4 rounded-xl bg-[#EE4D2D] hover:bg-[#E03A17] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-colors cursor-pointer active:scale-[0.99]"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>SE AFILIAR A ESTE PRODUTO AGORA</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowAffiliationRequiredModal(false)}
+                className="w-full py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-medium transition-colors cursor-pointer"
+              >
+                Voltar e Escolher Outro Produto
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading Animation Modal */}
+      {isAffiliationLoadingOpen && productToAffiliate && (
+        <AffiliationLoadingModal
+          product={productToAffiliate}
+          isOpen={isAffiliationLoadingOpen}
+          onComplete={handleCompleteAffiliation}
+          onClose={() => setIsAffiliationLoadingOpen(false)}
+        />
       )}
     </div>
   );

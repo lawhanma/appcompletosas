@@ -1,6 +1,7 @@
 import React from "react";
 import { ShopNextLogo } from "./ShopNextLogo";
-import { PanelLeft, Bell, Sparkles } from "lucide-react";
+import { PanelLeft, Bell, Sparkles, Clock } from "lucide-react";
+import { useFinancial } from "../context/FinancialContext";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -13,6 +14,8 @@ export const Header: React.FC<HeaderProps> = ({
   collapsed: _collapsed,
   onOpenVideoCreator 
 }) => {
+  const { isWarmupPhase, warmupHoursRemaining } = useFinancial();
+
   return (
     <header className="h-14 bg-white border-b border-slate-200/70 flex items-center justify-between px-5 lg:px-7 shrink-0 relative z-20">
       {/* Left Action: Toggle Sidebar */}
@@ -34,6 +37,13 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right Controls */}
       <div className="flex items-center gap-2.5">
+        {isWarmupPhase && (
+          <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200">
+            <Clock className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+            <span>Aquecimento IA (~{warmupHoursRemaining}h)</span>
+          </div>
+        )}
+
         <div className="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-md text-xs text-slate-600 bg-slate-50 border border-slate-200/60">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           <span className="text-[11px] font-medium text-slate-500">Shopee Open API</span>

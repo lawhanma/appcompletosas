@@ -6,6 +6,7 @@ import {
   Lock, 
   Mail, 
   User, 
+  Phone,
   ShieldCheck, 
   AlertCircle, 
   ArrowRight, 
@@ -14,12 +15,24 @@ import {
 } from "lucide-react";
 
 interface AuthScreenProps {
-  onLoginSuccess: (userEmail: string, code?: string) => void;
+  onLoginSuccess: (userEmail: string, code?: string, name?: string, phone?: string) => void;
 }
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState(() => {
+    try {
+      const savedProfile = localStorage.getItem("shopnext_profile_custom");
+      if (savedProfile) {
+        const p = JSON.parse(savedProfile);
+        if (p.phone) return p.phone;
+      }
+      const session = internalDb.getActiveSession();
+      if (session?.phone) return session.phone;
+    } catch {}
+    return "";
+  });
   const [email, setEmail] = useState(() => {
     try {
       const session = internalDb.getActiveSession();
@@ -68,11 +81,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
-      // Salva usuário e sessão no banco interno resiliente
+      // Salva usuário, dados completos do lead e sessão no banco interno resiliente
       const finalName = name.trim() || (isRegisterMode ? "Novo Afiliado" : "Afiliado Shop GO");
+      const finalPhone = phone.trim();
+
       internalDb.saveUser({
         email: email.trim(),
         name: finalName,
+        phone: finalPhone,
         purchaseCode: cleanCode,
         password: password.trim()
       });
@@ -81,10 +97,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
         userEmail: email.trim(),
         purchaseCode: cleanCode,
         name: finalName,
+        phone: finalPhone,
         authenticated: true
       });
 
-      onLoginSuccess(email.trim(), cleanCode);
+      onLoginSuccess(email.trim(), cleanCode, finalName, finalPhone);
     }, 450);
   };
 
@@ -147,22 +164,40 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
           <form onSubmit={handleSubmit} className="space-y-3.5">
             {isRegisterMode && (
-              <div>
-                <label className="text-xs font-medium text-slate-700 block mb-1">
-                  Nome Completo / Razão Social:
-                </label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Digite seu nome completo"
-                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#EE4D2D] focus:ring-1 focus:ring-[#EE4D2D]/20 transition-colors"
-                  />
+              <>
+                <div>
+                  <label className="text-xs font-medium text-slate-700 block mb-1">
+                    Nome Completo / Razão Social:
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Digite seu nome completo"
+                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#EE4D2D] focus:ring-1 focus:ring-[#EE4D2D]/20 transition-colors"
+                    />
+                  </div>
                 </div>
-              </div>
+
+                <div>
+                  <label className="text-xs font-medium text-slate-700 block mb-1">
+                    WhatsApp / Telefone (com DDD):
+                  </label>
+                  <div className="relative">
+                    <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="(11) 99999-9999"
+                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#EE4D2D] focus:ring-1 focus:ring-[#EE4D2D]/20 transition-colors"
+                    />
+                  </div>
+                </div>
+              </>
             )}
 
             <div>

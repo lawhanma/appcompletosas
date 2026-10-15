@@ -6,10 +6,13 @@ export interface DbUser {
   id: string;
   email: string;
   name: string;
+  phone?: string;
   purchaseCode: string;
+  pixKey?: string;
   isVip: boolean;
   password?: string;
   createdAt: number;
+  firstAccessAt: number;
   lastLogin: number;
 }
 
@@ -19,6 +22,9 @@ export interface DbSession {
   purchaseCode: string;
   isVip: boolean;
   name: string;
+  phone?: string;
+  pixKey?: string;
+  firstAccessAt?: number;
   authenticated: boolean;
   createdAt: number;
   lastActive: number;
@@ -26,9 +32,11 @@ export interface DbSession {
 }
 
 const DB_NAME = "ShopNext_InternalDB";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const SESSION_STORAGE_KEY = "shopnext_db_session_v2";
 const USERS_STORAGE_KEY = "shopnext_db_users_v2";
+const LEADS_STORAGE_KEY = "shopnext_db_leads_v2";
+const FIRST_ACCESS_KEY_PREFIX = "shopnext_first_access_";
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 // Validador de códigos autorizados
@@ -57,6 +65,9 @@ function openIndexedDB(): Promise<IDBDatabase | null> {
         if (!db.objectStoreNames.contains("users")) {
           db.createObjectStore("users", { keyPath: "email" });
         }
+        if (!db.objectStoreNames.contains("leads")) {
+          db.createObjectStore("leads", { keyPath: "email" });
+        }
       };
 
       request.onsuccess = () => {
@@ -73,7 +84,7 @@ function openIndexedDB(): Promise<IDBDatabase | null> {
 }
 
 // Escrita assíncrona no IndexedDB
-async function idbSet(storeName: "sessions" | "users", value: any): Promise<void> {
+async function idbSet(storeName: "sessions" | "users" | "leads", value: any): Promise<void> {
   const db = await openIndexedDB();
   if (!db) return;
   try {
@@ -86,7 +97,7 @@ async function idbSet(storeName: "sessions" | "users", value: any): Promise<void
 }
 
 // Leitura assíncrona no IndexedDB
-async function idbGet<T>(storeName: "sessions" | "users", key: IDBValidKey): Promise<T | null> {
+async function idbGet<T>(storeName: "sessions" | "users" | "leads", key: IDBValidKey): Promise<T | null> {
   const db = await openIndexedDB();
   if (!db) return null;
   return new Promise((resolve) => {
@@ -103,7 +114,7 @@ async function idbGet<T>(storeName: "sessions" | "users", key: IDBValidKey): Pro
 }
 
 // Remoção assíncrona no IndexedDB
-async function idbDelete(storeName: "sessions" | "users", key: IDBValidKey): Promise<void> {
+async function idbDelete(storeName: "sessions" | "users" | "leads", key: IDBValidKey): Promise<void> {
   const db = await openIndexedDB();
   if (!db) return;
   try {
@@ -189,19 +200,33 @@ export const internalDb = {
     userEmail: string;
     purchaseCode: string;
     name?: string;
+    phone?: string;
+    pixKey?: string;
+    firstAccessAt?: number;
     isVip?: boolean;
     authenticated?: boolean;
   }): DbSession {
     const now = Date.now();
+    const cleanEmail = data.userEmail.trim();
     const cleanCode = data.purchaseCode.trim();
     const isVip = typeof data.isVip === "boolean" ? data.isVip : isVipCode(cleanCode);
 
+    // Recupera primeiro acesso já existente ou inicializa agora
+    const existingFirstAccess = this.getFirstAccessAt(cleanEmail, cleanCode);
+    const firstAccessAt = data.firstAccessAt || existingFirstAccess || now;
+    if (!existingFirstAccess) {
+      this.setFirstAccessAt(cleanEmail, cleanCode, firstAccessAt);
+    }
+
     const session: DbSession = {
       sessionId: "active_current_session",
-      userEmail: data.userEmail.trim(),
+      userEmail: cleanEmail,
       purchaseCode: cleanCode,
       isVip,
       name: data.name?.trim() || "Afiliado Shop GO",
+      phone: data.phone?.trim() || "",
+      pixKey: data.pixKey?.trim() || "",
+      firstAccessAt,
       authenticated: data.authenticated !== false,
       createdAt: now,
       lastActive: now,
@@ -219,7 +244,8 @@ export const internalDb = {
           email: session.userEmail,
           authenticated: true,
           purchaseCode: session.purchaseCode,
-          name: session.name
+          name: session.name,
+          phone: session.phone
         })
       );
     } catch (e) {
@@ -229,10 +255,13 @@ export const internalDb = {
     // Grava também no IndexedDB para redundância ultra-resistente
     idbSet("sessions", session);
 
-    // Também registra ou atualiza o usuário no banco de dados interno
+    // Também registra ou atualiza o lead/usuário no banco de dados interno
     this.saveUser({
       email: session.userEmail,
       name: session.name,
+      phone: session.phone,
+      pixKey: session.pixKey,
+      firstAccessAt: session.firstAccessAt,
       purchaseCode: session.purchaseCode,
       isVip: session.isVip
     });
@@ -266,12 +295,67 @@ export const internalDb = {
     idbDelete("sessions", "active_current_session");
   },
 
-  // Salva / Atualiza usuário na tabela interna de usuários
+  // Recupera o timestamp do primeiro acesso do lead
+  getFirstAccessAt(email: string, code?: string): number {
+    try {
+      const cleanEmail = email.toLowerCase().trim();
+      const directKey = `${FIRST_ACCESS_KEY_PREFIX}${cleanEmail}`;
+      const saved = localStorage.getItem(directKey);
+      if (saved) {
+        const val = Number(saved);
+        if (!isNaN(val) && val > 0) return val;
+      }
+
+      const user = this.getUserByEmail(cleanEmail);
+      if (user?.firstAccessAt) return user.firstAccessAt;
+
+      if (code) {
+        const codeKey = `${FIRST_ACCESS_KEY_PREFIX}code_${code.trim()}`;
+        const codeSaved = localStorage.getItem(codeKey);
+        if (codeSaved) {
+          const val = Number(codeSaved);
+          if (!isNaN(val) && val > 0) return val;
+        }
+      }
+    } catch {}
+    return 0;
+  },
+
+  // Registra o timestamp do primeiro acesso do lead
+  setFirstAccessAt(email: string, code: string, timestamp: number): void {
+    try {
+      const cleanEmail = email.toLowerCase().trim();
+      const directKey = `${FIRST_ACCESS_KEY_PREFIX}${cleanEmail}`;
+      localStorage.setItem(directKey, timestamp.toString());
+      if (code) {
+        localStorage.setItem(`${FIRST_ACCESS_KEY_PREFIX}code_${code.trim()}`, timestamp.toString());
+      }
+    } catch {}
+  },
+
+  // Simula avanço de 5 horas para testes rápidos
+  fastForwardLeadWarmup(email: string, code?: string): number {
+    const FIVE_HOURS_MS = 5 * 60 * 60 * 1000 + 1000;
+    const simulatedFirstAccess = Date.now() - FIVE_HOURS_MS;
+    this.setFirstAccessAt(email, code || "", simulatedFirstAccess);
+
+    const user = this.getUserByEmail(email);
+    if (user) {
+      user.firstAccessAt = simulatedFirstAccess;
+      this.saveUser(user);
+    }
+    return simulatedFirstAccess;
+  },
+
+  // Salva / Atualiza usuário e dados de lead na tabela interna de usuários
   saveUser(user: {
     email: string;
     name: string;
+    phone?: string;
     purchaseCode: string;
+    pixKey?: string;
     password?: string;
+    firstAccessAt?: number;
     isVip?: boolean;
   }): DbUser {
     const cleanEmail = user.email.toLowerCase().trim();
@@ -281,14 +365,21 @@ export const internalDb = {
     const users = this.getAllUsers();
     const existing = users.find((u) => u.email === cleanEmail);
 
+    const existingFirstAccess = this.getFirstAccessAt(cleanEmail, cleanCode);
+    const firstAccessAt = user.firstAccessAt || existing?.firstAccessAt || existingFirstAccess || Date.now();
+    this.setFirstAccessAt(cleanEmail, cleanCode, firstAccessAt);
+
     const dbUser: DbUser = {
       id: existing?.id || `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       email: cleanEmail,
       name: user.name.trim() || existing?.name || "Afiliado Shop GO",
+      phone: user.phone?.trim() || existing?.phone || "",
       purchaseCode: cleanCode,
+      pixKey: user.pixKey?.trim() || existing?.pixKey || "",
       isVip,
       password: user.password || existing?.password || "",
       createdAt: existing?.createdAt || Date.now(),
+      firstAccessAt,
       lastLogin: Date.now()
     };
 
@@ -297,17 +388,53 @@ export const internalDb = {
 
     try {
       localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+      localStorage.setItem(LEADS_STORAGE_KEY, JSON.stringify(updatedUsers));
+      // Espelha perfil no localStorage para compatibilidade imediata
+      localStorage.setItem("shopnext_profile_custom", JSON.stringify({
+        name: dbUser.name,
+        phone: dbUser.phone,
+        pixKey: dbUser.pixKey
+      }));
     } catch {}
 
     idbSet("users", dbUser);
+    idbSet("leads", dbUser);
 
     return dbUser;
+  },
+
+  // Atualiza perfil cadastral do lead (Nome, Telefone, Chave Pix)
+  updateLeadProfile(email: string, updates: { name?: string; phone?: string; pixKey?: string }): DbUser | null {
+    const user = this.getUserByEmail(email);
+    if (!user) {
+      const session = this.getActiveSession();
+      if (session) {
+        return this.saveUser({
+          email: session.userEmail,
+          name: updates.name || session.name,
+          phone: updates.phone,
+          pixKey: updates.pixKey,
+          purchaseCode: session.purchaseCode,
+          isVip: session.isVip
+        });
+      }
+      return null;
+    }
+
+    const updated = this.saveUser({
+      ...user,
+      name: typeof updates.name === "string" ? updates.name : user.name,
+      phone: typeof updates.phone === "string" ? updates.phone : user.phone,
+      pixKey: typeof updates.pixKey === "string" ? updates.pixKey : user.pixKey
+    });
+
+    return updated;
   },
 
   // Retorna todos os usuários do banco interno
   getAllUsers(): DbUser[] {
     try {
-      const raw = localStorage.getItem(USERS_STORAGE_KEY);
+      const raw = localStorage.getItem(USERS_STORAGE_KEY) || localStorage.getItem(LEADS_STORAGE_KEY);
       if (raw) {
         return JSON.parse(raw);
       }

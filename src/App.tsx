@@ -76,11 +76,13 @@ function AppContent() {
   if (!isAuthenticated) {
     return (
       <AuthScreen
-        onLoginSuccess={(email, code) => {
+        onLoginSuccess={(email, code, name, phone) => {
           const finalCode = code || "101190";
           internalDb.saveSession({
             userEmail: email,
             purchaseCode: finalCode,
+            name: name || "Afiliado Shop GO",
+            phone: phone || "",
             authenticated: true
           });
           if (email) setUserEmail(email);

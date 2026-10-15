@@ -10,36 +10,37 @@ import {
   ArrowRight, 
   Sparkles,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from "lucide-react";
 import { useShopeeAffiliation } from "../utils/useShopeeAffiliation";
 import { getWorkingShopeeUrl } from "../utils/shopee";
+import { AffiliationLoadingModal } from "./AffiliationLoadingModal";
 
 interface ShopeeAffiliateActionProps {
   product: Product;
   variant?: "card" | "full";
   onOpenFullModal?: () => void;
+  onAffiliationComplete?: () => void;
 }
 
 export const ShopeeAffiliateAction: React.FC<ShopeeAffiliateActionProps> = ({
   product,
   variant = "full",
-  onOpenFullModal
+  onOpenFullModal,
+  onAffiliationComplete
 }) => {
   const {
     isCode101190,
     isAffiliated,
     markProductAsAffiliated,
-    setHasShopeeAccount,
     getProductAffiliateLink,
-    handleRedirectToProductAffiliation,
-    handleRedirectToShopeeRegister,
     handleGetAffiliateLink
   } = useShopeeAffiliation();
 
+  const [isLoadingAnimationOpen, setIsLoadingAnimationOpen] = useState(false);
   const [showOptionsModal, setShowOptionsModal] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [justRegistered, setJustRegistered] = useState(false);
 
   const productAffiliated = isAffiliated(product.id);
   const affiliateLink = getProductAffiliateLink(product);
@@ -60,28 +61,29 @@ export const ShopeeAffiliateAction: React.FC<ShopeeAffiliateActionProps> = ({
     }
   };
 
-  const handleOptionHasAccount = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    handleRedirectToProductAffiliation(product);
+  // Start the official affiliation flow with loading animation
+  const handleStartAffiliation = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setShowOptionsModal(false);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 3000);
+    setIsLoadingAnimationOpen(true);
   };
 
-  const handleOptionNoAccount = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    handleRedirectToShopeeRegister(product);
-    setJustRegistered(true);
-  };
-
-  const handleConfirmAccountCreated = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setHasShopeeAccount(true);
+  // Callback when loading animation finishes
+  const handleCompleteAffiliation = () => {
     markProductAsAffiliated(product.id);
-    setShowOptionsModal(false);
-    setJustRegistered(false);
+    setIsLoadingAnimationOpen(false);
+    
+    // Open official product page on Shopee
     const targetUrl = getWorkingShopeeUrl(product);
     window.open(targetUrl, "_blank", "noopener,noreferrer");
+
+    // Feedback toast
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3000);
+
+    if (onAffiliationComplete) {
+      onAffiliationComplete();
+    }
   };
 
   // -------------------------------------------------------------
@@ -94,17 +96,22 @@ export const ShopeeAffiliateAction: React.FC<ShopeeAffiliateActionProps> = ({
         <>
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowOptionsModal(true);
-            }}
+            onClick={handleStartAffiliation}
             className="w-full py-2 px-3 rounded-lg bg-[#EE4D2D] hover:bg-[#E03A17] text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs active:scale-[0.99]"
+            title="Aperte para se afiliar ao produto na Shopee"
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span>Se afiliar ao produto na Shopee</span>
           </button>
 
-          {showOptionsModal && renderOptionsDialog()}
+          {isLoadingAnimationOpen && (
+            <AffiliationLoadingModal
+              product={product}
+              isOpen={isLoadingAnimationOpen}
+              onComplete={handleCompleteAffiliation}
+              onClose={() => setIsLoadingAnimationOpen(false)}
+            />
+          )}
         </>
       );
     }
@@ -130,8 +137,6 @@ export const ShopeeAffiliateAction: React.FC<ShopeeAffiliateActionProps> = ({
             </>
           )}
         </button>
-
-        {showOptionsModal && renderOptionsDialog()}
       </>
     );
   }
@@ -143,19 +148,19 @@ export const ShopeeAffiliateAction: React.FC<ShopeeAffiliateActionProps> = ({
     <div className="space-y-4">
       {/* Status Banner */}
       {!productAffiliated && isCode101190 ? (
-        <div className="p-3.5 rounded-lg bg-amber-50/70 border border-amber-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="p-3.5 rounded-lg bg-amber-50/80 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-0.5">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-900 uppercase tracking-wide">
               <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
               <span>Primeiro Acesso: Afiliação Pendente</span>
             </div>
             <p className="text-xs text-amber-800">
-              Para faturar comissões com a sua conta de afiliado, conecte este produto à sua conta Shopee.
+              Para faturar comissões e divulgar nas redes, conecte este produto à sua conta Shopee apertando no botão abaixo.
             </p>
           </div>
           <button
             type="button"
-            onClick={() => setShowOptionsModal(true)}
+            onClick={handleStartAffiliation}
             className="px-3.5 py-2 rounded-lg bg-[#EE4D2D] hover:bg-[#E03A17] text-white text-xs font-medium flex items-center justify-center gap-1.5 shadow-xs cursor-pointer shrink-0 transition-colors"
           >
             <Sparkles className="w-3.5 h-3.5" />
@@ -186,32 +191,42 @@ export const ShopeeAffiliateAction: React.FC<ShopeeAffiliateActionProps> = ({
       {!productAffiliated && isCode101190 ? (
         <div className="p-5 bg-slate-900 text-white rounded-xl border border-slate-800 shadow-xs space-y-3.5">
           <div>
-            <span className="inline-block px-2 py-0.2 rounded bg-orange-500/20 text-orange-300 font-semibold text-[10px] tracking-wider uppercase mb-1 border border-orange-500/30">
+            <span className="inline-block px-2 py-0.5 rounded bg-orange-500/20 text-orange-300 font-semibold text-[10px] tracking-wider uppercase mb-1 border border-orange-500/30">
               PASSO OBRIGATÓRIO DE AFILIAÇÃO
             </span>
             <h4 className="text-sm sm:text-base font-semibold text-white">
-              Pronto para faturar com {product.name}?
+              Pronto para se afiliar a {product.name}?
             </h4>
             <p className="text-xs text-slate-300 mt-1 max-w-lg leading-relaxed">
-              Clique abaixo para se afiliar ao produto na Shopee. Você poderá vincular sua conta existente ou criar uma em instantes.
+              Aperte no botão abaixo para se afiliar ao produto na Shopee. Uma animação rápida sincronizará sua conta de afiliado e você será redirecionado para a página do produto.
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowOptionsModal(true)}
-            className="w-full py-2.5 px-4 rounded-lg bg-[#EE4D2D] hover:bg-[#E03A17] text-white font-medium text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Se afiliar ao produto na Shopee</span>
-            <ArrowRight className="w-3.5 h-3.5 ml-1" />
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2.5">
+            <button
+              type="button"
+              onClick={handleStartAffiliation}
+              className="flex-1 py-3 px-4 rounded-lg bg-[#EE4D2D] hover:bg-[#E03A17] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer active:scale-[0.99]"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>APERTAR PARA SE AFILIAR AO PRODUTO</span>
+              <ArrowRight className="w-4 h-4 ml-1" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowOptionsModal(true)}
+              className="py-2.5 px-3 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs font-medium transition-colors cursor-pointer"
+            >
+              Opções de Conta
+            </button>
+          </div>
         </div>
       ) : (
         /* Subsequent times: "Pegar link de afiliação" banner */
         <div className="p-4 bg-emerald-50/50 rounded-xl border border-emerald-200/70 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-0.5">
-            <span className="inline-flex items-center gap-1 px-2 py-0.2 rounded bg-emerald-600 text-white text-[10px] font-semibold uppercase">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-semibold uppercase">
               <Check className="w-3 h-3" />
               Link Pronto para Divulgação
             </span>
@@ -219,14 +234,14 @@ export const ShopeeAffiliateAction: React.FC<ShopeeAffiliateActionProps> = ({
               Pronto para compartilhar e receber comissões
             </h4>
             <p className="text-xs text-slate-500">
-              Clique em pegar link para copiar e abrir o anúncio oficial do produto.
+              Clique em pegar link para copiar o link rastreado e abrir o anúncio oficial do produto.
             </p>
           </div>
 
           <button
             type="button"
             onClick={handlePegarLinkClick}
-            className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs shadow-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0"
+            className="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs shadow-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0"
           >
             {copied ? (
               <>
@@ -325,6 +340,17 @@ export const ShopeeAffiliateAction: React.FC<ShopeeAffiliateActionProps> = ({
         </div>
       </div>
 
+      {/* Loading Animation Modal */}
+      {isLoadingAnimationOpen && (
+        <AffiliationLoadingModal
+          product={product}
+          isOpen={isLoadingAnimationOpen}
+          onComplete={handleCompleteAffiliation}
+          onClose={() => setIsLoadingAnimationOpen(false)}
+        />
+      )}
+
+      {/* Options Dialog */}
       {showOptionsModal && renderOptionsDialog()}
     </div>
   );
@@ -351,17 +377,10 @@ export const ShopeeAffiliateAction: React.FC<ShopeeAffiliateActionProps> = ({
               <Sparkles className="w-5 h-5" />
             </div>
             <h3 className="text-base font-semibold text-slate-900 font-display">
-              Se afiliar ao produto na Shopee
+              Opções de Conta Shopee Afiliados
             </h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
               {product.name}
-            </p>
-          </div>
-
-          {/* Question */}
-          <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-center">
-            <p className="text-xs font-medium text-slate-700">
-              Você já possui cadastro no Programa de Afiliados da Shopee?
             </p>
           </div>
 
@@ -369,7 +388,7 @@ export const ShopeeAffiliateAction: React.FC<ShopeeAffiliateActionProps> = ({
           <div className="space-y-2.5">
             {/* Option 1: JÁ TENHO CONTA */}
             <div 
-              onClick={handleOptionHasAccount}
+              onClick={handleStartAffiliation}
               className="p-3.5 rounded-lg border border-emerald-200/80 bg-emerald-50/30 hover:bg-emerald-50 hover:border-emerald-300 cursor-pointer transition-colors flex items-center justify-between group shadow-2xs"
             >
               <div className="flex items-center gap-3">
@@ -379,10 +398,10 @@ export const ShopeeAffiliateAction: React.FC<ShopeeAffiliateActionProps> = ({
                 <div>
                   <h4 className="font-semibold text-slate-900 text-xs flex items-center gap-1.5">
                     <span>Sim, já tenho conta na Shopee</span>
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-200 text-emerald-900 font-semibold">RECOMENDADO</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-200 text-emerald-900 font-semibold">RECOMENDADO</span>
                   </h4>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Redirecionar para a Shopee para se afiliar ao produto agora.
+                    Iniciar animação de carregamento e abrir a Shopee para se afiliar agora.
                   </p>
                 </div>
               </div>
@@ -390,9 +409,12 @@ export const ShopeeAffiliateAction: React.FC<ShopeeAffiliateActionProps> = ({
             </div>
 
             {/* Option 2: NÃO TENHO CONTA */}
-            <div 
-              onClick={handleOptionNoAccount}
-              className="p-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 cursor-pointer transition-colors flex items-center justify-between group shadow-2xs"
+            <a 
+              href="https://affiliate.shopee.com.br"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setShowOptionsModal(false)}
+              className="p-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 cursor-pointer transition-colors flex items-center justify-between group shadow-2xs block"
             >
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-[#EE4D2D] text-white flex items-center justify-center shrink-0">
@@ -403,38 +425,19 @@ export const ShopeeAffiliateAction: React.FC<ShopeeAffiliateActionProps> = ({
                     Não tenho conta de afiliado
                   </h4>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Redirecionar para <strong className="text-slate-800">affiliate.shopee.com.br</strong> para se cadastrar.
+                    Abrir portal oficial <strong className="text-slate-800">affiliate.shopee.com.br</strong> para criar cadastro gratuito.
                   </p>
                 </div>
               </div>
               <ExternalLink className="w-4 h-4 text-slate-400 shrink-0" />
-            </div>
+            </a>
           </div>
-
-          {/* Feedback after clicking "Não tenho conta" */}
-          {justRegistered && (
-            <div className="p-3 rounded-lg bg-orange-50/70 border border-orange-200 text-center space-y-2 animate-in fade-in">
-              <p className="text-xs text-slate-700">
-                O portal oficial de afiliados da Shopee foi aberto em outra aba. Assim que finalizar seu cadastro, clique abaixo para liberar o link do produto:
-              </p>
-              <button
-                type="button"
-                onClick={handleConfirmAccountCreated}
-                className="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs shadow-xs transition-colors cursor-pointer"
-              >
-                ✓ Já concluí meu cadastro na Shopee
-              </button>
-            </div>
-          )}
 
           {/* Footer cancel button */}
           <div className="pt-1">
             <button
               type="button"
-              onClick={() => {
-                setShowOptionsModal(false);
-                setJustRegistered(false);
-              }}
+              onClick={() => setShowOptionsModal(false)}
               className="w-full py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-medium transition-colors cursor-pointer"
             >
               Fechar
