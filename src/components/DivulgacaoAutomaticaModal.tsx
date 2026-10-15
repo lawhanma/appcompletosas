@@ -259,13 +259,15 @@ export const DivulgacaoAutomaticaModal: React.FC<DivulgacaoAutomaticaModalProps>
                 targetId === "kwai" ? 6900 :
                 targetId === "whatsapp" ? 3400 : 5100;
 
+              const isVipUser = userCode === "123456" || userCode === "12456";
               const realisticLikes = Math.floor(realisticViews * 0.12);
-              const realisticSales = 
+              const realisticSales = isVipUser ? (
                 targetId === "tiktok" ? 7 :
                 targetId === "whatsapp" ? 5 :
                 targetId === "kwai" ? 4 :
                 targetId === "instagram" ? 3 :
-                targetId === "facebook" ? 2 : 1;
+                targetId === "facebook" ? 2 : 1
+              ) : 0;
 
               return {
                 ...p,
@@ -279,10 +281,13 @@ export const DivulgacaoAutomaticaModal: React.FC<DivulgacaoAutomaticaModalProps>
             return p;
           }));
 
-          // Trigger sales toast notification
-          const salesMsg = `Nova venda registrada via ${targetId.toUpperCase()}! (+R$ ${product.price.toFixed(2).replace(".", ",")})`;
-          setRecentSalesNotification(salesMsg);
-          setTimeout(() => setRecentSalesNotification(null), 2500);
+          // Trigger sales toast notification only for VIP accounts with sales
+          const isVipUser = userCode === "123456" || userCode === "12456";
+          if (isVipUser) {
+            const salesMsg = `Nova venda registrada via ${targetId.toUpperCase()}! (+R$ ${product.price.toFixed(2).replace(".", ",")})`;
+            setRecentSalesNotification(salesMsg);
+            setTimeout(() => setRecentSalesNotification(null), 2500);
+          }
 
         }, 2200);
 
@@ -297,12 +302,8 @@ export const DivulgacaoAutomaticaModal: React.FC<DivulgacaoAutomaticaModalProps>
           if (isVipUser) {
             commVal = Number((Math.random() * (70 - 20) + 20).toFixed(2));
           } else {
-            // Código 101190: Máximo 25 reais por dia de comissão!
-            const remaining = Math.max(0, Number((25.00 - state.dailyAccumulated).toFixed(2)));
-            if (remaining > 0) {
-              const raw = Math.random() * (6.50 - 3.50) + 3.50;
-              commVal = Math.min(remaining, Number(raw.toFixed(2)));
-            }
+            // Regra estrita: No código 101190 não entra nenhuma venda ou comissão!
+            commVal = 0;
           }
           setEarnedCommission(commVal);
           if (commVal > 0) {
@@ -319,12 +320,13 @@ export const DivulgacaoAutomaticaModal: React.FC<DivulgacaoAutomaticaModalProps>
     }, 4000);
 
     return () => clearInterval(postInterval);
-  }, [phase, product]);
+  }, [phase, product, userCode]);
 
   // Aggregate stats
-  const totalSales = platforms.reduce((acc, p) => acc + p.salesCount, 0);
-  const totalRevenue = totalSales * product.price;
-  const totalCommission = earnedCommission > 0 ? earnedCommission : totalSales * product.commissionValue;
+  const isVipUser = userCode === "123456" || userCode === "12456";
+  const totalSales = isVipUser ? platforms.reduce((acc, p) => acc + p.salesCount, 0) : 0;
+  const totalRevenue = isVipUser ? totalSales * product.price : 0;
+  const totalCommission = isVipUser ? (earnedCommission > 0 ? earnedCommission : totalSales * product.commissionValue) : 0;
   const totalReach = platforms.reduce((acc, p) => acc + p.views, 0);
 
   // Copy full sales campaign report

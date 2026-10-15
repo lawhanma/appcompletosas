@@ -1,6 +1,6 @@
 {
-  "summary": "Plano de implementação detalhado para o fluxo de afiliação obrigatória com animação de carregamento e redirecionamento, validação de erro na divulgação automática, trava de 5 horas e limite de R$ 30/dia para o código 101190, e salvamento robusto de leads no banco interno.",
-  "updatedAt": "2026-10-15T06:12:43.289223920Z",
+  "summary": "Plano de implementação para zerar estritamente qualquer entrada de vendas, faturamento e saldo para o código de compra 101190, mantendo todas as ferramentas de afiliação e divulgação funcionando sem gerar comissões financeiras.",
+  "updatedAt": "2026-10-15T18:00:11.365547763Z",
   "requestFeedback": true,
   "userFacing": true
 }

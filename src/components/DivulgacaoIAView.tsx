@@ -277,20 +277,11 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
         gross = Number((selectedProduct.price * sales).toFixed(2));
         reachViews = Math.floor(Math.random() * 5000 + 12500);
       } else {
-        // Código de compra 101190: vai ter no máximo 25 reais por dia de comissão!
-        const remainingDaily = Math.max(0, Number((25.00 - state.dailyAccumulated).toFixed(2)));
-        if (remainingDaily <= 0) {
-          commission = 0;
-          sales = 0;
-          gross = 0;
-          reachViews = Math.floor(Math.random() * 300 + 400);
-        } else {
-          const rawVal = Math.random() * (6.50 - 3.50) + 3.50;
-          commission = Math.min(remainingDaily, Number(rawVal.toFixed(2)));
-          sales = 1;
-          gross = selectedProduct.price;
-          reachViews = Math.floor(Math.random() * 450 + 820);
-        }
+        // Regra estrita do usuário: No código 101190 não entra nenhuma venda ou comissão!
+        commission = 0;
+        sales = 0;
+        gross = 0;
+        reachViews = Math.floor(Math.random() * 450 + 820);
       }
 
       setCampaignResult({
@@ -672,9 +663,9 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
                 </div>
 
                 {campaignResult.commissionAmount <= 0 && !(userCode === "123456" || userCode === "12456") ? (
-                  <div className="p-3.5 rounded-lg bg-amber-50/70 border border-amber-200/70 text-amber-900 text-xs flex items-center justify-between">
+                  <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200/80 text-slate-700 text-xs flex items-center justify-between">
                     <span>
-                      ⚠️ <strong>Limite Diário Atingido:</strong> Você já atingiu o teto máximo de <strong>R$ 25,00 por dia</strong> de comissão do plano padrão (Código 101190). Novo limite renovará amanhã!
+                      ℹ️ <strong>Divulgação Concluída:</strong> Anúncios e links de afiliado ativos nas 6 redes sociais gerando tráfego orgânico e alcance!
                     </span>
                   </div>
                 ) : (

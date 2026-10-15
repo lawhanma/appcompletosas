@@ -3,13 +3,26 @@ import { Product } from "../types";
 import { getWorkingShopeeUrl } from "./shopee";
 import { useFinancial } from "../context/FinancialContext";
 
-const STORAGE_AFFILIATED_PRODUCTS_KEY = "shopnext_shopee_affiliated_products_101190";
-const STORAGE_HAS_ACCOUNT_KEY = "shopnext_shopee_has_account_101190";
+const STORAGE_AFFILIATED_PRODUCTS_KEY_101190 = "shopnext_shopee_affiliated_products_101190";
+const STORAGE_AFFILIATED_PRODUCTS_KEY_887422 = "shopnext_shopee_affiliated_products_887422";
+const STORAGE_HAS_ACCOUNT_KEY = "shopnext_shopee_has_account";
 export const SHOPEE_AFFILIATE_PORTAL_URL = "https://affiliate.shopee.com.br";
 
-export function getAffiliatedProductIdsFromStorage(): string[] {
+export const isStandardCode = (code?: string): boolean => {
+  const clean = code?.trim();
+  return clean === "101190" || clean === "887422";
+};
+
+export const getAffiliationStorageKey = (code?: string): string => {
+  const clean = code?.trim();
+  if (clean === "887422") return STORAGE_AFFILIATED_PRODUCTS_KEY_887422;
+  return STORAGE_AFFILIATED_PRODUCTS_KEY_101190;
+};
+
+export function getAffiliatedProductIdsFromStorage(userCode?: string): string[] {
   try {
-    const saved = localStorage.getItem(STORAGE_AFFILIATED_PRODUCTS_KEY);
+    const key = getAffiliationStorageKey(userCode);
+    const saved = localStorage.getItem(key);
     return saved ? JSON.parse(saved) : [];
   } catch {
     return [];
@@ -17,19 +30,19 @@ export function getAffiliatedProductIdsFromStorage(): string[] {
 }
 
 export function checkIsProductAffiliated(productId: string, userCode?: string): boolean {
-  if (userCode && userCode !== "101190") {
+  if (userCode && !isStandardCode(userCode)) {
     return true;
   }
-  const affiliated = getAffiliatedProductIdsFromStorage();
+  const affiliated = getAffiliatedProductIdsFromStorage(userCode);
   return affiliated.includes(productId);
 }
 
 export function useShopeeAffiliation() {
   const { userCode } = useFinancial();
-  const isCode101190 = userCode === "101190";
+  const isCode101190 = isStandardCode(userCode);
 
   const [affiliatedProductIds, setAffiliatedProductIds] = useState<string[]>(() => {
-    return getAffiliatedProductIdsFromStorage();
+    return getAffiliatedProductIdsFromStorage(userCode);
   });
 
   const [hasShopeeAccount, setHasShopeeAccountState] = useState<boolean>(() => {
@@ -41,8 +54,13 @@ export function useShopeeAffiliation() {
     }
   });
 
+  // Keep state synchronized with active userCode
+  useEffect(() => {
+    setAffiliatedProductIds(getAffiliatedProductIdsFromStorage(userCode));
+  }, [userCode]);
+
   const isAffiliated = useCallback((productId: string): boolean => {
-    // For 101190, user must have explicitly gone through the affiliation flow for this product
+    // For standard codes (101190 and 887422), user must have explicitly gone through the affiliation flow for this product
     if (!isCode101190) return true;
     return affiliatedProductIds.includes(productId);
   }, [isCode101190, affiliatedProductIds]);
@@ -52,24 +70,25 @@ export function useShopeeAffiliation() {
       if (prev.includes(productId)) return prev;
       const updated = [...prev, productId];
       try {
-        localStorage.setItem(STORAGE_AFFILIATED_PRODUCTS_KEY, JSON.stringify(updated));
+        const key = getAffiliationStorageKey(userCode);
+        localStorage.setItem(key, JSON.stringify(updated));
         // Dispara evento para sincronizar múltiplos componentes instantaneamente
-        window.dispatchEvent(new CustomEvent("shopnext_affiliation_updated", { detail: { productId } }));
+        window.dispatchEvent(new CustomEvent("shopnext_affiliation_updated", { detail: { productId, userCode } }));
       } catch (e) {
         console.error(e);
       }
       return updated;
     });
-  }, []);
+  }, [userCode]);
 
   // Listen to cross-component affiliation updates
   useEffect(() => {
     const handleUpdate = () => {
-      setAffiliatedProductIds(getAffiliatedProductIdsFromStorage());
+      setAffiliatedProductIds(getAffiliatedProductIdsFromStorage(userCode));
     };
     window.addEventListener("shopnext_affiliation_updated", handleUpdate);
     return () => window.removeEventListener("shopnext_affiliation_updated", handleUpdate);
-  }, []);
+  }, [userCode]);
 
   const setHasShopeeAccount = useCallback((hasAccount: boolean) => {
     setHasShopeeAccountState(hasAccount);

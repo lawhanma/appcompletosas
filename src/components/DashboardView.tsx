@@ -51,31 +51,31 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
     }, 500);
   };
 
-  // Metrics based on selected period (zeros during 5h warmup for standard code 101190)
+  // Metrics based on selected period: strictly R$ 0,00 for standard code 101190
   const displayFaturamento = useMemo(() => {
-    if (isWarmupPhase) return 0.00;
+    if (!isVip) return 0.00;
     if (selectedPeriod === "hoje") return state.faturamentoDiario;
-    if (selectedPeriod === "ontem") return isVip ? 2840.00 : 30.00;
-    if (selectedPeriod === "7dias") return isVip ? 18650.00 : 180.00;
+    if (selectedPeriod === "ontem") return 2840.00;
+    if (selectedPeriod === "7dias") return 18650.00;
     return state.faturamentoMes;
-  }, [selectedPeriod, state.faturamentoDiario, state.faturamentoMes, isVip, isWarmupPhase]);
+  }, [selectedPeriod, state.faturamentoDiario, state.faturamentoMes, isVip]);
 
   const displayComissoes = useMemo(() => {
-    if (isWarmupPhase) return 0.00;
+    if (!isVip) return 0.00;
     const totalComissao = state.saldoDisponivel + state.saldoPendente;
     if (selectedPeriod === "hoje") return totalComissao;
-    if (selectedPeriod === "ontem") return isVip ? 426.00 : 30.00;
-    if (selectedPeriod === "7dias") return isVip ? 2790.00 : 120.00;
-    return isVip ? 15370.50 : 210.00;
-  }, [selectedPeriod, state.saldoDisponivel, state.saldoPendente, isVip, isWarmupPhase]);
+    if (selectedPeriod === "ontem") return 426.00;
+    if (selectedPeriod === "7dias") return 2790.00;
+    return 15370.50;
+  }, [selectedPeriod, state.saldoDisponivel, state.saldoPendente, isVip]);
 
   const displayPedidos = useMemo(() => {
-    if (isWarmupPhase) return 0;
+    if (!isVip) return 0;
     if (selectedPeriod === "hoje") return state.pedidosHoje;
-    if (selectedPeriod === "ontem") return isVip ? 36 : 3;
-    if (selectedPeriod === "7dias") return isVip ? 245 : 12;
+    if (selectedPeriod === "ontem") return 36;
+    if (selectedPeriod === "7dias") return 245;
     return state.vendasRealizadas;
-  }, [selectedPeriod, state.pedidosHoje, state.vendasRealizadas, isVip, isWarmupPhase]);
+  }, [selectedPeriod, state.pedidosHoje, state.vendasRealizadas, isVip]);
 
   // Hourly curve for chart (00h, 04h, 08h, 12h, 16h, 20h, 23h)
   const chartData = useMemo(() => {
@@ -154,8 +154,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
   }, [svgCoordinates]);
 
   // Daily target calculation
-  const metaDiaria = isVip ? 3000.00 : 180.00;
-  const percentMeta = Math.min(100, (state.faturamentoDiario / metaDiaria) * 100);
+  const metaDiaria = isVip ? 3000.00 : 0.00;
+  const percentMeta = metaDiaria > 0 ? Math.min(100, (state.faturamentoDiario / metaDiaria) * 100) : 0;
   const remainingMeta = Math.max(0, metaDiaria - state.faturamentoDiario);
 
   const formatCurrency = (val: number) => {
@@ -249,39 +249,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
           </button>
         </div>
       </div>
-
-      {/* Warmup Phase Notice for Code 101190 */}
-      {isWarmupPhase && (
-        <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
-              <Clock className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-amber-900 uppercase tracking-wide">
-                  Conta em Período de Aquecimento IA (Primeiras 5 Horas)
-                </span>
-                <span className="px-1.5 py-0.2 rounded bg-amber-200 text-amber-900 text-[10px] font-mono-code font-bold">
-                  Restam ~{warmupHoursRemaining}h
-                </span>
-              </div>
-              <p className="text-xs text-amber-800 mt-0.5 leading-relaxed">
-                Código 101190: para garantir conformidade e indexação natural de tráfego, as vendas e o saldo (até R$ 30,00 por dia) começarão a entrar na dashboard após 5 horas do seu primeiro acesso.
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={fastForwardWarmup}
-            className="px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shrink-0 cursor-pointer transition-colors shadow-2xs"
-            title="Acelerar 5 horas para testar a entrada de saldo e vendas imediatamente"
-          >
-            Avançar 5 Horas (Teste) ⚡
-          </button>
-        </div>
-      )}
 
       {/* 4 Core High-Impact KPI Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

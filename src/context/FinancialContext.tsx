@@ -19,9 +19,9 @@ export interface Transaction {
 
 export interface FinancialState {
   userEmail: string;
-  userCode: "101190" | "123456" | "12456" | string;
+  userCode: "101190" | "887422" | "123456" | "12456" | string;
   faturamentoDiario: number;       // Faturamento bruto do dia (adiciona até R$ 3.000 para 123456)
-  metaFaturamentoDiario: number;   // Meta diária (3000.00 para 123456, 30.00 para 101190)
+  metaFaturamentoDiario: number;   // Meta diária (3000.00 para 123456, 0.00 para 101190 e 887422)
   faturamentoMes: number;          // Faturamento acumulado no mês
   saldoDisponivel: number;         // Saldo liberado para saque imediato (entregue ao cliente)
   saldoPendente: number;           // Saldo pendente a receber (em trânsito)
@@ -41,7 +41,7 @@ export interface FinancialState {
 }
 
 export const FIVE_HOURS_MS = 5 * 60 * 60 * 1000; // 5 horas em milissegundos
-export const MAX_DAILY_COMMISSION_101190 = 30.00; // Máximo de R$ 30,00 por dia para o código 101190
+export const MAX_DAILY_COMMISSION_101190 = 0.00; // Nos códigos padrão (101190 e 887422) não entra nenhuma venda (R$ 0,00)
 
 interface FinancialContextType {
   state: FinancialState;
@@ -107,7 +107,7 @@ export const createCleanState = (code: string, email?: string, initialFirstAcces
     userEmail,
     userCode: cleanCode,
     faturamentoDiario: 0.00,
-    metaFaturamentoDiario: isVip ? 3000.00 : 30.00,
+    metaFaturamentoDiario: isVip ? 3000.00 : 0.00,
     faturamentoMes: 0.00,
     saldoDisponivel: 0.00, // Saldo inicial zerado
     saldoPendente: 0.00,   // Saldo pendente inicial zerado
@@ -117,7 +117,7 @@ export const createCleanState = (code: string, email?: string, initialFirstAcces
     cliquesVisualizacoes: 0,
     comissaoMedia: 0.00,
     totalWithdrawn: 0.00,
-    dailyAccumulated: 0.00, // Comissões do dia iniciam zeradas
+    dailyAccumulated: 0.00, // Comissões do dia zeradas
     currentDayString: getTodayString(),
     lastDripTimestamp: Date.now(),
     aiCredits: isVip ? 5 : 4,
@@ -157,27 +157,24 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (typeof parsed.saldoPendente !== "number") parsed.saldoPendente = 0;
         if (typeof parsed.dailyAccumulated !== "number") parsed.dailyAccumulated = 0;
         
-        parsed.metaFaturamentoDiario = isVip ? 3000.00 : 30.00;
+        parsed.metaFaturamentoDiario = isVip ? 3000.00 : 0.00;
 
         // Recupera primeiro acesso persistido do lead
         const firstAccess = parsed.firstAccessAt || internalDb.getFirstAccessAt(parsed.userEmail || "", parsed.userCode || "");
         parsed.firstAccessAt = firstAccess || Date.now();
 
-        // Regra estrita para o código 101190:
-        // Nas primeiras 5 horas de primeiro acesso: nenhum saldo pode entrar na dashboard!
-        if (!isVip) {
-          const inWarmup = (Date.now() - parsed.firstAccessAt) < FIVE_HOURS_MS;
-          if (inWarmup) {
-            parsed.saldoDisponivel = 0.00;
-            parsed.saldoPendente = 0.00;
-            parsed.faturamentoDiario = 0.00;
-            parsed.dailyAccumulated = 0.00;
-            parsed.pedidosHoje = 0;
-            parsed.vendasRealizadas = 0;
-            parsed.transactions = [];
-          } else if (parsed.dailyAccumulated > MAX_DAILY_COMMISSION_101190) {
-            parsed.dailyAccumulated = MAX_DAILY_COMMISSION_101190;
-          }
+        // Regra estrita: Nos códigos 101190 e 887422 não entra NENHUMA venda, saldo ou faturamento!
+        if (!isVip || parsed.userCode === "101190" || parsed.userCode === "887422") {
+          parsed.saldoDisponivel = 0.00;
+          parsed.saldoPendente = 0.00;
+          parsed.faturamentoDiario = 0.00;
+          parsed.faturamentoMes = 0.00;
+          parsed.dailyAccumulated = 0.00;
+          parsed.pedidosHoje = 0;
+          parsed.vendasRealizadas = 0;
+          parsed.unidadesVendidas = 0;
+          parsed.metaFaturamentoDiario = 0.00;
+          parsed.transactions = [];
         }
 
         return parsed;
@@ -187,7 +184,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     } catch (e) {
       console.error("Error reading financial state from localStorage:", e);
     }
-    return INITIAL_123456;
+    return INITIAL_101190;
   });
 
   const [lastSaleNotification, setLastSaleNotification] = useState<{
@@ -214,29 +211,13 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const isVip = state.userCode === "123456" || state.userCode === "12456";
 
-  const isWarmupPhase = !isVip && (Date.now() - (state.firstAccessAt || 0) < FIVE_HOURS_MS);
-  const warmupHoursRemaining = !isVip
-    ? Math.max(0, Number(((FIVE_HOURS_MS - (Date.now() - (state.firstAccessAt || 0))) / (1000 * 60 * 60)).toFixed(1)))
-    : 0;
+  const isWarmupPhase = false;
+  const warmupHoursRemaining = 0;
 
-  const fastForwardWarmup = useCallback(() => {
-    const newFirstAccess = Date.now() - (FIVE_HOURS_MS + 2000);
-    internalDb.setFirstAccessAt(state.userEmail, state.userCode, newFirstAccess);
-    setState(prev => ({
-      ...prev,
-      firstAccessAt: newFirstAccess
-    }));
-    setLastSaleNotification({
-      product: "Aquecimento de 5h Concluído!",
-      amount: 0,
-      time: "Agora",
-      status: "liberado",
-      message: "O período de 5 horas de aquecimento da IA foi concluído! As vendas e comissões de até R$ 30,00 por dia começarão a entrar na dashboard."
-    });
-  }, [state.userEmail, state.userCode]);
+  const fastForwardWarmup = useCallback(() => {}, []);
 
-  // Add commission function: new sales enter as PENDING (saldoPendente)
-  // "no codigo de compra 101190 e só para ter 30 reais por dia de vendas, mas só entrar um saldo na dashboard depois de umas 5 horas do primeiro acesso da pessoa"
+  // Add commission function:
+  // "No codigo de compra 101190 na verdade não e para entrar nenhuma venda ok?"
   const addCommission = useCallback((
     amount: number, 
     product: string, 
@@ -248,41 +229,18 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const isVipUser = prev.userCode === "123456" || prev.userCode === "12456";
       const isDivulgacao = type === "divulgacao";
       
-      // Regra: "no codigo de compra 101190 e só para ter 30 reais por dia de vendas"
-      let finalAmount = amount;
-      if (!isVipUser) {
-        // Bloqueia se ainda estiver no período de 5h de aquecimento
-        const inWarmup = (Date.now() - (prev.firstAccessAt || 0)) < FIVE_HOURS_MS;
-        if (inWarmup) {
-          const remainingMinutes = Math.ceil((FIVE_HOURS_MS - (Date.now() - (prev.firstAccessAt || 0))) / (1000 * 60));
-          const hoursRem = Math.floor(remainingMinutes / 60);
-          const minsRem = remainingMinutes % 60;
-          setLastSaleNotification({
-            product: "Campanha em Aquecimento IA (5 Horas)",
-            amount: 0,
-            time: "Agora",
-            status: "pendente",
-            message: `Aguarde o período de 5h de indexação da IA (restam ${hoursRem}h ${minsRem}m). As vendas e comissões serão computadas na dashboard após essa ativação!`
-          });
-          return prev;
-        }
-
-        const remainingDaily = Math.max(0, Number((MAX_DAILY_COMMISSION_101190 - prev.dailyAccumulated).toFixed(2)));
-        if (remainingDaily <= 0) {
-          setLastSaleNotification({
-            product: "Limite Diário Atingido (Código 101190)",
-            amount: 0,
-            time: "Hoje",
-            status: "liberado",
-            message: "Limite diário de R$ 30,00 de vendas atingido para o código 101190. O limite renova à meia-noite!"
-          });
-          return prev;
-        }
-        finalAmount = Math.min(amount, remainingDaily);
+      // Regra estrita: Nos códigos 101190 e 887422 NÃO entra nenhuma venda ou faturamento financeiro
+      if (!isVipUser || prev.userCode === "101190" || prev.userCode === "887422") {
+        return {
+          ...prev,
+          hasDoneDivulgacao: true,
+          cliquesVisualizacoes: prev.cliquesVisualizacoes + Math.floor(Math.random() * 25 + 12)
+        };
       }
 
+      let finalAmount = amount;
       const actualSaleAmount = saleAmount || (finalAmount * 6.5);
-      const cap = isVipUser ? 3000.00 : 180.00;
+      const cap = 3000.00;
       const newFaturamento = Math.min(cap, Number((prev.faturamentoDiario + actualSaleAmount).toFixed(2)));
       
       const newSaldoDisponivel = isDivulgacao 
@@ -348,41 +306,15 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
   }, []);
 
-  // Simulate a live sale (adds to faturamentoDiario up to 3000 for VIP, or up to 30 for 101190 after 5 hours)
+  // Simulate a live sale (adds to faturamentoDiario up to 3000 for VIP only)
   const simulateLiveSale = useCallback(() => {
     setState((prev) => {
       const isVipUser = prev.userCode === "123456" || prev.userCode === "12456";
-      const cap = isVipUser ? 3000.00 : 30.00;
-
-      if (!isVipUser) {
-        // Bloqueia se ainda estiver nas 5h de aquecimento
-        const inWarmup = (Date.now() - (prev.firstAccessAt || 0)) < FIVE_HOURS_MS;
-        if (inWarmup) {
-          const remainingMinutes = Math.ceil((FIVE_HOURS_MS - (Date.now() - (prev.firstAccessAt || 0))) / (1000 * 60));
-          const hoursRem = Math.floor(remainingMinutes / 60);
-          const minsRem = remainingMinutes % 60;
-          setLastSaleNotification({
-            product: "Campanha em Aquecimento IA (5 Horas)",
-            amount: 0,
-            time: "Agora",
-            status: "pendente",
-            message: `Aguarde o período de 5h de indexação da IA (restam ${hoursRem}h ${minsRem}m). As vendas serão computadas na dashboard após essa ativação!`
-          });
-          return prev;
-        }
-
-        if (prev.dailyAccumulated >= MAX_DAILY_COMMISSION_101190) {
-          setLastSaleNotification({
-            product: "Limite Diário Atingido (Código 101190)",
-            amount: 0,
-            time: "Hoje",
-            status: "liberado",
-            message: "Limite diário de R$ 30,00 de vendas atingido para o código 101190."
-          });
-          return prev;
-        }
+      if (!isVipUser || prev.userCode === "101190" || prev.userCode === "887422") {
+        return prev;
       }
 
+      const cap = 3000.00;
       if (prev.faturamentoDiario >= cap) {
         setLastSaleNotification({
           product: "Meta Diária Atingida!",
@@ -395,18 +327,11 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
 
       const randomProd = PRODUCTS[Math.floor(Math.random() * PRODUCTS.length)];
-      const rawSale = isVipUser 
-        ? Number((Math.random() * 85 + 49).toFixed(2))
-        : Number((Math.random() * 20 + 35).toFixed(2));
+      const rawSale = Number((Math.random() * 85 + 49).toFixed(2));
       const saleVal = Math.min(rawSale, Number((cap - prev.faturamentoDiario).toFixed(2)));
       if (saleVal <= 0) return prev;
 
-      let commVal = Number((saleVal * (randomProd.commissionRate ? randomProd.commissionRate / 100 : 0.15)).toFixed(2));
-      if (!isVipUser) {
-        const remaining = Math.max(0, Number((MAX_DAILY_COMMISSION_101190 - prev.dailyAccumulated).toFixed(2)));
-        commVal = Math.min(commVal, remaining);
-        if (commVal <= 0) return prev;
-      }
+      const commVal = Number((saleVal * (randomProd.commissionRate ? randomProd.commissionRate / 100 : 0.15)).toFixed(2));
 
       const channels = ["Shopee Afiliados", "TikTok Shop", "Grupos WhatsApp VIP", "Instagram Reels", "Kwai"];
       const channel = channels[Math.floor(Math.random() * channels.length)];
@@ -574,83 +499,9 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const today = getTodayString();
         const isCurrentVip = current.userCode === "123456" || current.userCode === "12456";
 
-        if (!isCurrentVip) {
-          // Regra 1: Verificar se já passaram 5 horas do primeiro acesso
-          const inWarmup = (Date.now() - (current.firstAccessAt || 0)) < FIVE_HOURS_MS;
-          if (inWarmup) {
-            // Conta ainda no período de 5h de aquecimento: saldo e faturamento permanecem 0!
-            return current;
-          }
-
-          // Regra 2: Teto diário estrito de R$ 30,00 de vendas/comissão por dia
-          if (current.dailyAccumulated >= MAX_DAILY_COMMISSION_101190) {
-            return current;
-          }
-
-          // Adiciona venda gradual de até R$ 30,00 por dia
-          const remainingDaily = Number((MAX_DAILY_COMMISSION_101190 - current.dailyAccumulated).toFixed(2));
-          if (remainingDaily <= 0) return current;
-
-          const randomProd = PRODUCTS[Math.floor(Math.random() * PRODUCTS.length)];
-          const commAmount = Math.min(
-            Number((Math.random() * 4 + 6).toFixed(2)), // Entre R$ 6,00 e R$ 10,00 por venda
-            remainingDaily
-          );
-          const rawSale = Number((commAmount * 5.2).toFixed(2));
-          const cappedSale = rawSale;
-
-          const newSaldoPendente = Number((current.saldoPendente + commAmount).toFixed(2));
-          const newFaturamento = Number((current.faturamentoDiario + cappedSale).toFixed(2));
-          const newVendas = current.vendasRealizadas + 1;
-          const newPedidos = current.pedidosHoje + 1;
-          const newUnidades = current.unidadesVendidas + 1;
-          const newCliques = current.cliquesVisualizacoes + Math.floor(Math.random() * 20 + 8);
-          const totalGeral = current.saldoDisponivel + newSaldoPendente;
-          const newMedia = Number((totalGeral / (newVendas || 1)).toFixed(2));
-          const channels = ["TikTok Shop", "Shopee Afiliados", "Grupos WhatsApp VIP", "Facebook Ofertas"];
-          const channel = channels[Math.floor(Math.random() * channels.length)];
-
-          const now = new Date();
-          const timeStr = `Hoje às ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
-
-          const newTx: Transaction = {
-            id: `TX-${Date.now().toString().slice(-6)}`,
-            date: timeStr,
-            timestamp: Date.now(),
-            product: randomProd.name,
-            channel,
-            saleAmount: cappedSale,
-            amount: commAmount,
-            type: "comissao",
-            status: "pendente",
-            deliveryStatus: "aguardando_entrega",
-            deliveryNote: "Aguardando recebimento do produto pelo cliente para liberar para saque",
-            imageUrl: randomProd.imageUrl
-          };
-
-          setLastSaleNotification({
-            product: randomProd.name,
-            saleAmount: cappedSale,
-            amount: commAmount,
-            time: timeStr,
-            status: "pendente",
-            message: `Nova venda registrada! +R$ ${cappedSale.toFixed(2).replace(".", ",")} de faturamento. Comissão (+R$ ${commAmount.toFixed(2).replace(".", ",")}) adicionada.`
-          });
-
-          return {
-            ...current,
-            currentDayString: today,
-            faturamentoDiario: newFaturamento,
-            saldoPendente: newSaldoPendente,
-            pedidosHoje: newPedidos,
-            vendasRealizadas: newVendas,
-            unidadesVendidas: newUnidades,
-            cliquesVisualizacoes: newCliques,
-            comissaoMedia: newMedia,
-            dailyAccumulated: Number((current.dailyAccumulated + commAmount).toFixed(2)),
-            lastDripTimestamp: Date.now(),
-            transactions: [newTx, ...current.transactions.slice(0, 39)]
-          };
+        if (!isCurrentVip || current.userCode === "101190" || current.userCode === "887422") {
+          // Regra estrita: Nos códigos de compra 101190 e 887422 não entra nenhuma venda ou faturamento
+          return current;
         }
 
         // Caso VIP: até 3.000,00 de faturamento
@@ -734,8 +585,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const deliveryTimer = setInterval(() => {
       setState(current => {
         const isCurrentVip = current.userCode === "123456" || current.userCode === "12456";
-        // Bloqueia liberação de entrega durante as primeiras 5 horas de aquecimento para código 101190
-        if (!isCurrentVip && (Date.now() - (current.firstAccessAt || 0) < FIVE_HOURS_MS)) {
+        if (!isCurrentVip || current.userCode === "101190" || current.userCode === "887422") {
           return current;
         }
 

@@ -40,11 +40,16 @@ const FIRST_ACCESS_KEY_PREFIX = "shopnext_first_access_";
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 // Validador de códigos autorizados
-export const ALLOWED_CODES = ["101190", "123456", "12456"];
+export const ALLOWED_CODES = ["101190", "887422", "123456", "12456"];
 
 export const isVipCode = (code: string): boolean => {
   const clean = code.trim();
   return clean === "123456" || clean === "12456";
+};
+
+export const isStandardCode = (code: string): boolean => {
+  const clean = code.trim();
+  return clean === "101190" || clean === "887422";
 };
 
 // Gerenciador IndexedDB nativo

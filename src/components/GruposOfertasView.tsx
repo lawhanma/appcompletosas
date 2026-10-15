@@ -376,7 +376,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
         );
         showToast(`🎉 Publicação concluída com sucesso! +R$ ${commissionVal.toFixed(2).replace(".", ",")} adicionados ao seu saldo!`);
       } else if (!isVipUser) {
-        showToast(`⚠️ Publicação enviada no ${group.name}! Limite diário de comissão de R$ 25,00 atingido para o código 101190.`);
+        showToast(`🎉 Publicação enviada com sucesso no ${group.name}!`);
       }
 
       // Add to joined groups if not already
@@ -1862,8 +1862,8 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
                 </div>
 
                 {massResult.totalCommission <= 0 && !(userCode === "123456" || userCode === "12456") && (
-                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs">
-                    ℹ️ O limite diário de comissão de R$ 25,00 foi atingido para o código 101190. Suas publicações continuam ativas gerando cliques e pedidos!
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs">
+                    ℹ️ Publicações ativas gerando cliques e tráfego orgânico nos grupos de ofertas!
                   </div>
                 )}
 
