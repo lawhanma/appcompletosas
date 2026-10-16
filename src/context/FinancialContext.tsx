@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { PRODUCTS } from "../data/mockData";
 import { internalDb } from "../utils/internalDb";
+import { isPresentationAccount } from "../utils/presentationAccount";
 
 export interface Transaction {
   id: string;
@@ -18,6 +19,7 @@ export interface Transaction {
 }
 
 export interface FinancialState {
+  presentationDataVersion?: number;
   userEmail: string;
   userCode: "101190" | "887422" | "123456" | "12456" | string;
   faturamentoDiario: number;       // Faturamento bruto do dia (adiciona até R$ 3.000 para 123456)
@@ -53,7 +55,7 @@ interface FinancialContextType {
   fastForwardWarmup: () => void;
   setUserCode: (code: string, isNewLogin?: boolean, email?: string) => void;
   setUserEmail: (email: string) => void;
-  addCommission: (amount: number, product: string, channel: string, type?: "comissao" | "divulgacao", saleAmount?: number) => void;
+  addCommission: (amount: number, product: string, channel: string, type?: "comissao" | "divulgacao", saleAmount?: number, quantity?: number) => void;
   simulateLiveSale: () => void;
   consumeAiCredit: () => boolean;
   requestWithdrawal: (amount: number, pixKey: string, keyType: string) => Promise<boolean>;
@@ -103,7 +105,7 @@ export const createCleanState = (code: string, email?: string, initialFirstAcces
     internalDb.setFirstAccessAt(userEmail, cleanCode, firstAccessAt);
   }
 
-  return {
+  const initial: FinancialState = {
     userEmail,
     userCode: cleanCode,
     faturamentoDiario: 0.00,
@@ -125,6 +127,29 @@ export const createCleanState = (code: string, email?: string, initialFirstAcces
     firstAccessAt,
     transactions: []
   };
+  if (!isPresentationAccount(userEmail)) return initial;
+  const transactions: Transaction[] = PRODUCTS.slice(0, 12).map((product, index) => {
+    const saleAmount = Number(Math.min(149.90, Math.max(49.90, product.price)).toFixed(2));
+    const delivered = index >= 5;
+    return {
+      id: `EXAMPLE-${index}`, date: 'Hoje', timestamp: Date.now() - index * 1800000,
+      product: product.name, channel: index % 2 ? 'TikTok Shop' : 'Shopee Afiliados',
+      saleAmount, amount: Number((saleAmount * product.commissionRate / 100).toFixed(2)),
+      type: 'comissao', status: delivered ? 'concluido' : 'pendente',
+      deliveryStatus: delivered ? 'entregue_ao_cliente' : 'aguardando_entrega',
+      imageUrl: product.imageUrl,
+    };
+  });
+  const sum = (values: number[]) => Number(values.reduce((a,b)=>a+b,0).toFixed(2));
+  const revenue = sum(transactions.map(t=>t.saleAmount));
+  const available = sum(transactions.filter(t=>t.status==='concluido').map(t=>t.amount));
+  const pending = sum(transactions.filter(t=>t.status==='pendente').map(t=>t.amount));
+  return {...initial, userCode: '123456', presentationDataVersion: 1,
+    faturamentoDiario: revenue, faturamentoMes: 18240 + revenue, metaFaturamentoDiario: 3000,
+    saldoDisponivel: available, saldoPendente: pending, vendasRealizadas: 156,
+    pedidosHoje: transactions.length, unidadesVendidas: 172, cliquesVisualizacoes: 4820,
+    comissaoMedia: Number(((available+pending)/transactions.length).toFixed(2)),
+    dailyAccumulated: available+pending, aiCredits: 5, transactions};
 };
 
 const INITIAL_101190: FinancialState = createCleanState("101190");
@@ -139,6 +164,13 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
+        if (activeSession && isPresentationAccount(activeSession.userEmail) &&
+            (parsed.userEmail !== activeSession.userEmail || parsed.presentationDataVersion !== 1)) {
+          return createCleanState(activeSession.purchaseCode, activeSession.userEmail);
+        }
+        if (activeSession && parsed.userEmail !== activeSession.userEmail) {
+          return createCleanState(activeSession.purchaseCode, activeSession.userEmail);
+        }
         if (activeSession && activeSession.purchaseCode) {
           parsed.userCode = activeSession.purchaseCode;
           if (activeSession.userEmail) parsed.userEmail = activeSession.userEmail;
@@ -223,7 +255,8 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     product: string, 
     channel: string, 
     type: "comissao" | "divulgacao" = "comissao",
-    saleAmount?: number
+    saleAmount?: number,
+    quantity: number = 1
   ) => {
     setState((prev) => {
       const isVipUser = prev.userCode === "123456" || prev.userCode === "12456";
@@ -240,7 +273,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       let finalAmount = amount;
       const actualSaleAmount = saleAmount || (finalAmount * 6.5);
-      const cap = 3000.00;
+      const cap = isPresentationAccount(prev.userEmail) ? Infinity : 3000.00;
       const newFaturamento = Math.min(cap, Number((prev.faturamentoDiario + actualSaleAmount).toFixed(2)));
       
       const newSaldoDisponivel = isDivulgacao 
@@ -250,9 +283,9 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         ? prev.saldoPendente 
         : Number((prev.saldoPendente + finalAmount).toFixed(2));
 
-      const newVendas = prev.vendasRealizadas + 1;
-      const newPedidos = prev.pedidosHoje + 1;
-      const newUnidades = prev.unidadesVendidas + 1;
+      const newVendas = prev.vendasRealizadas + quantity;
+      const newPedidos = prev.pedidosHoje + quantity;
+      const newUnidades = prev.unidadesVendidas + quantity;
       const newCliques = prev.cliquesVisualizacoes + Math.floor(Math.random() * 25 + 12);
       const totalGeral = newSaldoDisponivel + newSaldoPendente;
       const newMedia = Number((totalGeral / (newVendas || 1)).toFixed(2));
@@ -291,6 +324,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return {
         ...prev,
         faturamentoDiario: newFaturamento,
+        faturamentoMes: Number((prev.faturamentoMes + actualSaleAmount).toFixed(2)),
         saldoDisponivel: newSaldoDisponivel,
         saldoPendente: newSaldoPendente,
         vendasRealizadas: newVendas,
@@ -366,6 +400,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return {
         ...prev,
         faturamentoDiario: Number((prev.faturamentoDiario + saleVal).toFixed(2)),
+        faturamentoMes: Number((prev.faturamentoMes + saleVal).toFixed(2)),
         saldoPendente: Number((prev.saldoPendente + commVal).toFixed(2)),
         pedidosHoje: prev.pedidosHoje + 1,
         vendasRealizadas: prev.vendasRealizadas + 1,
@@ -561,6 +596,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           ...current,
           currentDayString: today,
           faturamentoDiario: newFaturamento,
+          faturamentoMes: Number((current.faturamentoMes + cappedSale).toFixed(2)),
           saldoPendente: newSaldoPendente,
           pedidosHoje: newPedidos,
           vendasRealizadas: newVendas,

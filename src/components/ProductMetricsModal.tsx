@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import {useDailyMissions} from '../context/DailyMissions';
 import { Product, NavTab } from "../types";
 import { 
   X, 
@@ -39,6 +40,8 @@ export const ProductMetricsModal: React.FC<ProductMetricsModalProps> = ({
   const [isAffiliationLoadingOpen, setIsAffiliationLoadingOpen] = useState(false);
 
   const { isAffiliated, markProductAsAffiliated } = useShopeeAffiliation();
+  const {record} = useDailyMissions();
+  useEffect(() => {if (product) record('product',product.id);},[product?.id,record]);
 
   if (!product) return null;
 

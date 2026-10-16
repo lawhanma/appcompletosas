@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ShopNextLogo } from "./ShopNextLogo";
 import { internalDb, ALLOWED_CODES } from "../utils/internalDb";
+import { supabase } from "../lib/supabase";
 import { 
   Key, 
   Lock, 
@@ -22,6 +23,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState(() => {
+    if (supabase) return '';
     try {
       const savedProfile = localStorage.getItem("shopnext_profile_custom");
       if (savedProfile) {
@@ -34,6 +36,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     return "";
   });
   const [email, setEmail] = useState(() => {
+    if (supabase) return '';
     try {
       const session = internalDb.getActiveSession();
       if (session?.userEmail) return session.userEmail;
@@ -45,6 +48,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [purchaseCode, setPurchaseCode] = useState(() => {
+    if (supabase) return '';
     try {
       const session = internalDb.getActiveSession();
       if (session?.purchaseCode) return session.purchaseCode;
@@ -53,10 +57,39 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   });
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [notice, setNotice] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
+    setNotice("");
+    if (supabase) {
+      if (isRegisterMode && !purchaseCode.trim()) {
+        setErrorMessage('Digite o código de compra para criar sua conta.');
+        return;
+      }
+      setIsLoading(true);
+      try {
+        const result = isRegisterMode
+          ? await supabase.auth.signUp({email:email.trim(), password,
+              options:{data:{full_name:name.trim(),phone:phone.trim(),purchase_code:purchaseCode.trim()},emailRedirectTo:window.location.origin}})
+          : await supabase.auth.signInWithPassword({email:email.trim(),password});
+        if (result.error) {
+          const code = result.error.code;
+          setErrorMessage(code === 'email_not_confirmed' ? 'Confirme seu e-mail antes de entrar.'
+            : code === 'weak_password' ? 'Escolha uma senha mais forte, com pelo menos 8 caracteres.'
+            : code === 'over_email_send_rate_limit' ? 'Muitas solicitações. Aguarde alguns minutos antes de tentar novamente.'
+            : isRegisterMode && code === 'unexpected_failure' ? 'Cadastro não autorizado. Confira seu código de compra e tente novamente.'
+            : isRegisterMode ? 'Não foi possível criar a conta. Verifique os dados ou tente entrar com seu e-mail.'
+            : 'E-mail ou senha inválidos. Confira os dados e tente novamente.');
+          return;
+        }
+        setPassword('');
+        if (isRegisterMode && !result.data.session) setNotice('Confira seu e-mail e clique no link de confirmação. Depois, volte aqui para entrar.');
+      } catch {setErrorMessage('Não foi possível conectar. Confira sua internet e tente novamente.');}
+      finally {setIsLoading(false);}
+      return;
+    }
 
     const cleanCode = purchaseCode.trim();
 
@@ -89,8 +122,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
         email: email.trim(),
         name: finalName,
         phone: finalPhone,
-        purchaseCode: cleanCode,
-        password: password.trim()
+        purchaseCode: cleanCode
       });
 
       internalDb.saveSession({
@@ -127,6 +159,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               onClick={() => {
                 setIsRegisterMode(false);
                 setErrorMessage("");
+                setNotice("");
               }}
               className={`flex-1 py-1.5 rounded-md transition-colors cursor-pointer ${
                 !isRegisterMode
@@ -141,6 +174,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               onClick={() => {
                 setIsRegisterMode(true);
                 setErrorMessage("");
+                setNotice("");
               }}
               className={`flex-1 py-1.5 rounded-md transition-colors cursor-pointer ${
                 isRegisterMode
@@ -155,6 +189,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
         {/* Card Form */}
         <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs p-6 space-y-4">
+          {notice && <p role="status" className="p-3 bg-emerald-50 text-emerald-800 rounded-lg text-xs">{notice}</p>}
           {errorMessage && (
             <div className="p-3 bg-rose-50 border border-rose-200/80 rounded-lg text-xs text-rose-700 flex items-start gap-2.5">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
@@ -208,6 +243,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="email"
+                  autoComplete="username"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -225,6 +261,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type={showPassword ? "text" : "password"}
+                  autoComplete={isRegisterMode ? "new-password" : "current-password"}
+                  minLength={supabase && isRegisterMode ? 8 : undefined}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -243,7 +281,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             </div>
 
             {/* License Code Section */}
-            <div className="pt-1">
+            {(!supabase || isRegisterMode) && <div className="pt-1">
               <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-lg space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-slate-900 flex items-center gap-1.5">
@@ -273,7 +311,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                   />
                 </div>
               </div>
-            </div>
+            </div>}
 
             {/* Submit Button */}
             <button
@@ -282,10 +320,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               className="w-full mt-2 py-2.5 px-4 rounded-lg text-white font-medium text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 btn-primary transition-all"
             >
               {isLoading ? (
-                <span>Validando Código de Compra...</span>
+                <span>{supabase ? 'Conectando…' : 'Validando Código de Compra…'}</span>
               ) : (
                 <>
-                  <span>{isRegisterMode ? "Concluir Cadastro e Acessar" : "Acessar Plataforma Shop GO"}</span>
+                  <span>{isRegisterMode ? (supabase ? "Criar conta" : "Concluir Cadastro e Acessar") : "Acessar Plataforma Shop GO"}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </>
               )}
@@ -296,7 +334,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
         {/* Security Footer Note */}
         <div className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-slate-400 text-center">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Acesso seguro e autenticado com licença única</span>
+          <span>{supabase ? 'Sua conta acompanha você em qualquer dispositivo' : 'Acesso com código de compra'}</span>
         </div>
       </div>
     </div>

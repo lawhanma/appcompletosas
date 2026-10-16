@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Product } from "../types";
 import { getWorkingShopeeUrl } from "./shopee";
 import { useFinancial } from "../context/FinancialContext";
+import {useDailyMissions} from '../context/DailyMissions';
 
 const STORAGE_AFFILIATED_PRODUCTS_KEY_101190 = "shopnext_shopee_affiliated_products_101190";
 const STORAGE_AFFILIATED_PRODUCTS_KEY_887422 = "shopnext_shopee_affiliated_products_887422";
@@ -38,6 +39,7 @@ export function checkIsProductAffiliated(productId: string, userCode?: string): 
 }
 
 export function useShopeeAffiliation() {
+  const {record} = useDailyMissions();
   const { userCode } = useFinancial();
   const isCode101190 = isStandardCode(userCode);
 
@@ -136,6 +138,7 @@ export function useShopeeAffiliation() {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(link);
         copied = true;
+        record('link',product.id);
       }
     } catch (err) {
       console.warn("Clipboard access failed", err);
@@ -144,7 +147,7 @@ export function useShopeeAffiliation() {
     const targetUrl = getWorkingShopeeUrl(product);
     window.open(targetUrl, "_blank", "noopener,noreferrer");
     return copied;
-  }, [getProductAffiliateLink]);
+  }, [getProductAffiliateLink,record]);
 
   return {
     isCode101190,

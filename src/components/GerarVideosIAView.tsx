@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { apiFetch } from "../lib/apiFetch";
 import { Product, GeneratedVideoData, VideoScene, InfluencerConfig, RecordingFormatOption, RecordingFormatId } from "../types";
 import { PRODUCTS } from "../data/mockData";
 import { getWorkingShopeeUrl } from "../utils/shopee";
@@ -259,7 +260,7 @@ export const GerarVideosIAView: React.FC<GerarVideosIAViewProps> = ({
       setTimeout(() => setGenerationStep(2), 700);
       setTimeout(() => setGenerationStep(3), 1400);
 
-      const res = await fetch("/api/ai/generate-video-script", {
+      const res = await apiFetch("/api/ai/generate-video-script", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -304,7 +305,7 @@ export const GerarVideosIAView: React.FC<GerarVideosIAViewProps> = ({
     const step2 = setTimeout(() => setFlowGenerationStep(3), 1100);
 
     try {
-      const res = await fetch("/api/ai/generate-flow-prompt", {
+      const res = await apiFetch("/api/ai/generate-flow-prompt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

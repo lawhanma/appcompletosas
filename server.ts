@@ -1,15 +1,34 @@
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import { createClient } from "@supabase/supabase-js";
 
-dotenv.config();
+dotenv.config({path: ['.env.local', '.env']});
 
 const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+
+// Verify identity and license on the server before allowing AI requests.
+app.use('/api/ai', async (req, res, next) => {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  if (!url && !key && process.env.NODE_ENV !== 'production' && !process.env.VERCEL) return next();
+  if (!url || !key) return res.status(503).json({error:'Conexão com o banco não configurada.'});
+  const token = req.headers.authorization?.match(/^Bearer (.+)$/i)?.[1];
+  if (!token) return res.status(401).json({error:'Entre na sua conta para continuar.'});
+  try {
+    const client = createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false},global:{headers:{Authorization:`Bearer ${token}`}}});
+    const {data,error} = await client.auth.getUser(token);
+    if (error || !data.user) return res.status(401).json({error:'Sessão inválida. Entre novamente.'});
+    const membership = await client.from('memberships').select('active').eq('user_id',data.user.id).maybeSingle();
+    if (membership.error) return res.status(503).json({error:'Não foi possível verificar seu acesso.'});
+    if (!membership.data?.active) return res.status(403).json({error:'Ative sua licença para continuar.'});
+    next();
+  } catch {res.status(503).json({error:'Não foi possível conectar ao banco. Tente novamente.'});}
+});
 
 // Lazy-initialized Gemini client
 let aiClient: GoogleGenAI | null = null;
@@ -395,6 +414,7 @@ Aspect Ratio: 9:16 Vertical | FPS: 60fps | Resolução: 4K UHD | Lente: 35mm f/1
 // Setup Vite middleware in dev or static files in production
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    const {createServer: createViteServer} = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -413,4 +433,5 @@ async function startServer() {
   });
 }
 
-startServer();
+if (!process.env.VERCEL) startServer();
+export default app;

@@ -10,7 +10,6 @@ export interface DbUser {
   purchaseCode: string;
   pixKey?: string;
   isVip: boolean;
-  password?: string;
   createdAt: number;
   firstAccessAt: number;
   lastLogin: number;
@@ -40,7 +39,8 @@ const FIRST_ACCESS_KEY_PREFIX = "shopnext_first_access_";
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 // Validador de códigos autorizados
-export const ALLOWED_CODES = ["101190", "887422", "123456", "12456"];
+// Offline development only. Production purchase credentials stay in Supabase.
+export const ALLOWED_CODES = import.meta.env?.DEV ? ["local-demo"] : [];
 
 export const isVipCode = (code: string): boolean => {
   const clean = code.trim();
@@ -359,7 +359,6 @@ export const internalDb = {
     phone?: string;
     purchaseCode: string;
     pixKey?: string;
-    password?: string;
     firstAccessAt?: number;
     isVip?: boolean;
   }): DbUser {
@@ -382,7 +381,6 @@ export const internalDb = {
       purchaseCode: cleanCode,
       pixKey: user.pixKey?.trim() || existing?.pixKey || "",
       isVip,
-      password: user.password || existing?.password || "",
       createdAt: existing?.createdAt || Date.now(),
       firstAccessAt,
       lastLogin: Date.now()

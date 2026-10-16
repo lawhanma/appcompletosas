@@ -26,6 +26,7 @@ import {
 import { useShopeeAffiliation } from "../utils/useShopeeAffiliation";
 import { AffiliationLoadingModal } from "./AffiliationLoadingModal";
 import { getWorkingShopeeUrl } from "../utils/shopee";
+import {useDailyMissions} from '../context/DailyMissions';
 
 interface DivulgacaoAutomaticaModalProps {
   product: Product | null;
@@ -51,17 +52,22 @@ interface SocialPlatformStatus {
   sampleCopy: string;
 }
 
-export const DivulgacaoAutomaticaModal: React.FC<DivulgacaoAutomaticaModalProps> = ({
+export const DivulgacaoAutomaticaModal: React.FC<DivulgacaoAutomaticaModalProps> = (props) =>
+  props.isOpen && props.product ? <ActiveDivulgacaoModal {...props} product={props.product} /> : null;
+
+const CAMPAIGN_SALES = {kwai: 4, tiktok: 7, facebook: 2, whatsapp: 5, instagram: 3, twitter: 1};
+
+const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'product'> & {product: Product}> = ({
   product,
   isOpen,
   onClose,
   onNavigateToFinancial
 }) => {
   const { addCommission, userCode, state } = useFinancial();
+  const {record} = useDailyMissions();
   const { isAffiliated, markProductAsAffiliated } = useShopeeAffiliation();
   const [isAffiliationLoadingOpen, setIsAffiliationLoadingOpen] = useState(false);
 
-  if (!isOpen || !product) return null;
 
   const productAffiliated = isAffiliated(product.id);
 
@@ -261,13 +267,7 @@ export const DivulgacaoAutomaticaModal: React.FC<DivulgacaoAutomaticaModalProps>
 
               const isVipUser = userCode === "123456" || userCode === "12456";
               const realisticLikes = Math.floor(realisticViews * 0.12);
-              const realisticSales = isVipUser ? (
-                targetId === "tiktok" ? 7 :
-                targetId === "whatsapp" ? 5 :
-                targetId === "kwai" ? 4 :
-                targetId === "instagram" ? 3 :
-                targetId === "facebook" ? 2 : 1
-              ) : 0;
+              const realisticSales = isVipUser ? CAMPAIGN_SALES[targetId] : 0;
 
               return {
                 ...p,
@@ -300,7 +300,7 @@ export const DivulgacaoAutomaticaModal: React.FC<DivulgacaoAutomaticaModalProps>
           const isVipUser = userCode === "123456" || userCode === "12456";
           let commVal = 0;
           if (isVipUser) {
-            commVal = Number((Math.random() * (70 - 20) + 20).toFixed(2));
+            commVal = Number((Object.values(CAMPAIGN_SALES).reduce((a,b)=>a+b,0) * product.commissionValue).toFixed(2));
           } else {
             // Regra estrita: No código 101190 não entra nenhuma venda ou comissão!
             commVal = 0;
@@ -311,10 +311,13 @@ export const DivulgacaoAutomaticaModal: React.FC<DivulgacaoAutomaticaModalProps>
               commVal, 
               product.name, 
               "Divulgação Automática (6 Redes)", 
-              "divulgacao"
+              "divulgacao",
+              Object.values(CAMPAIGN_SALES).reduce((a,b)=>a+b,0) * product.price,
+              Object.values(CAMPAIGN_SALES).reduce((a,b)=>a+b,0)
             );
           }
           setPhase("results");
+          record('campaign',`${product.id}:${Date.now()}`);
         }, 1500);
       }
     }, 4000);

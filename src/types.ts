@@ -1,5 +1,6 @@
 export type NavTab = 
   | "dashboard" 
+  | "missoes"
   | "financeiro" 
   | "catalogo" 
   | "divulgacao" 

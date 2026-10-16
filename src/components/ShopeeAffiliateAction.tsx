@@ -16,6 +16,7 @@ import {
 import { useShopeeAffiliation } from "../utils/useShopeeAffiliation";
 import { getWorkingShopeeUrl } from "../utils/shopee";
 import { AffiliationLoadingModal } from "./AffiliationLoadingModal";
+import {useDailyMissions} from '../context/DailyMissions';
 
 interface ShopeeAffiliateActionProps {
   product: Product;
@@ -30,6 +31,7 @@ export const ShopeeAffiliateAction: React.FC<ShopeeAffiliateActionProps> = ({
   onOpenFullModal,
   onAffiliationComplete
 }) => {
+  const {record} = useDailyMissions();
   const {
     isCode101190,
     isAffiliated,
@@ -45,9 +47,10 @@ export const ShopeeAffiliateAction: React.FC<ShopeeAffiliateActionProps> = ({
   const productAffiliated = isAffiliated(product.id);
   const affiliateLink = getProductAffiliateLink(product);
 
-  const handleCopyOnly = (e?: React.MouseEvent) => {
+  const handleCopyOnly = async (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    navigator.clipboard.writeText(affiliateLink);
+    try {await navigator.clipboard.writeText(affiliateLink);} catch {return;}
+    record('link',product.id);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   };

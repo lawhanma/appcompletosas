@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Product } from "../types";
 import { PRODUCTS } from "../data/mockData";
 import { useFinancial } from "../context/FinancialContext";
+import {useDailyMissions} from '../context/DailyMissions';
 import { GruposOfertasView } from "./GruposOfertasView";
 import { 
   Sparkles, 
@@ -32,7 +33,9 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
   onOpenVideoCreator,
   defaultSubTab = "automatica"
 }) => {
-  const { state, userCode, addCommission, consumeAiCredit } = useFinancial();
+  const { state, userCode, isVip, addCommission, consumeAiCredit } = useFinancial();
+  const dailyCredits = isVip ? 5 : 4;
+  const {record} = useDailyMissions();
   const { isAffiliated, markProductAsAffiliated } = useShopeeAffiliation();
 
   const [subTab, setSubTab] = useState<"automatica" | "grupos" | "tiktok">(defaultSubTab);
@@ -296,10 +299,13 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
           commission, 
           selectedProduct.name, 
           "Divulgação Automática (6 Redes)", 
-          "divulgacao"
+          "divulgacao",
+          gross,
+          sales
         );
       }
       setIsPosting(false);
+      record('campaign',`${selectedProduct.id}:${Date.now()}`);
     }, 30800);
   };
 
@@ -374,7 +380,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
                 <div className="flex items-center justify-between text-xs font-medium text-slate-700">
                   <span>Status do Limite</span>
                   <span className="text-[#EE4D2D] font-mono-code font-semibold">
-                    {state.aiCredits}/4 ({Math.round((state.aiCredits / 4) * 100)}%)
+                    {state.aiCredits}/{dailyCredits} ({Math.round((state.aiCredits / dailyCredits) * 100)}%)
                   </span>
                 </div>
 

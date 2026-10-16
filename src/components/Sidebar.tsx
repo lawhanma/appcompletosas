@@ -10,7 +10,8 @@ import {
   Video, 
   Link2, 
   User, 
-  LogOut
+  LogOut,
+  Target
 } from "lucide-react";
 
 interface SidebarProps {
@@ -30,6 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { state } = useFinancial();
   const menuItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
     { id: "dashboard", label: "Dashboard", icon: <LayoutGrid className="w-4 h-4" /> },
+    { id: "missoes", label: "Missões diárias", icon: <Target className="w-4 h-4" /> },
     { id: "financeiro", label: "Financeiro", icon: <DollarSign className="w-4 h-4" /> },
     { id: "catalogo", label: "Catálogo", icon: <Package className="w-4 h-4" /> },
     { id: "divulgacao", label: "Divulgação com IA", icon: <Sparkles className="w-4 h-4" /> },

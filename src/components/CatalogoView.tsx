@@ -335,7 +335,9 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
                       src={product.imageUrl}
                       alt={product.name}
                       referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-200"
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-contain bg-white p-3 group-hover:scale-102 transition-transform duration-200"
                     />
 
                     {/* Rank Badge */}

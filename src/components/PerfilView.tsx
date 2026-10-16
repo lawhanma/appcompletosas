@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useFinancial } from "../context/FinancialContext";
 import { internalDb } from "../utils/internalDb";
+import { useCloudAccount } from "../context/CloudAccount";
+import { supabase } from "../lib/supabase";
 import { 
   User, 
   Mail, 
@@ -32,6 +34,7 @@ const sanitizeClean = (val?: string) => {
 };
 
 export const PerfilView: React.FC = () => {
+  const cloudAccount = useCloudAccount();
   const { state, userEmail, userCode, isVip } = useFinancial();
 
   // Exigência do usuário:
@@ -113,12 +116,35 @@ export const PerfilView: React.FC = () => {
   })();
 
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (!cloudAccount) return;
+    setName(cloudAccount.profile.full_name);
+    setPhone(cloudAccount.profile.phone);
+    setPixKey(cloudAccount.profile.pix_key);
+  }, [cloudAccount?.profile]);
+
+  async function persistCloudProfile(fullName: string, phoneValue: string, pixValue: string) {
+    if (!cloudAccount || !supabase) return true;
+    setSaving(true); setSaveError(''); setSaved(false);
+    try {
+      const {data,error} = await supabase.from('profiles').update({full_name:fullName,phone:phoneValue,pix_key:pixValue})
+        .eq('id',cloudAccount.profile.id).select('id,full_name,phone,pix_key').single();
+      if (error || !data) throw new Error('profile-save');
+      cloudAccount.updateProfile(data);
+      return true;
+    } catch {setSaveError('Não foi possível salvar seu perfil. Seus dados ainda não foram sincronizados. Tente novamente.'); return false;}
+    finally {setSaving(false);}
+  }
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanName = sanitizeClean(name);
     const cleanPhone = sanitizeClean(phone);
     const cleanPix = sanitizeClean(pixKey);
+    if (!(await persistCloudProfile(cleanName, cleanPhone, cleanPix))) return;
 
     try {
       localStorage.setItem("shopnext_profile_custom", JSON.stringify({ 
@@ -143,7 +169,8 @@ export const PerfilView: React.FC = () => {
     setTimeout(() => setSaved(false), 3000);
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
+    if (!(await persistCloudProfile('', '', ''))) return;
     setName("");
     setPhone("");
     setPixKey("");
@@ -202,6 +229,7 @@ export const PerfilView: React.FC = () => {
       </div>
 
       {/* Profile Form */}
+      {saveError && <p role="alert" className="p-3 text-sm text-rose-700 bg-rose-50 rounded-lg">{saveError}</p>}
       <form onSubmit={handleSave} className="bg-white rounded-xl border border-slate-200/80 p-5 sm:p-6 shadow-xs space-y-6">
         <div>
           <h3 className="font-semibold text-slate-900 text-sm font-display">
@@ -306,12 +334,13 @@ export const PerfilView: React.FC = () => {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>Dados protegidos com criptografia SSL 256 bits</span>
+              <span>{cloudAccount ? 'Dados salvos na sua conta' : 'Dados salvos neste navegador'}</span>
             </div>
 
             {(name || phone || pixKey) && (
               <button
                 type="button"
+                disabled={saving}
                 onClick={handleClearAll}
                 className="text-[11px] text-rose-600 hover:text-rose-700 flex items-center gap-1 font-medium hover:underline cursor-pointer"
                 title="Limpar todos os campos"
@@ -324,6 +353,7 @@ export const PerfilView: React.FC = () => {
 
           <button
             type="submit"
+            disabled={saving}
             className="px-4 py-2 bg-[#EE4D2D] hover:bg-[#E03A17] text-white font-medium text-xs rounded-lg shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
           >
             {saved ? (
@@ -332,7 +362,7 @@ export const PerfilView: React.FC = () => {
                 <span>Salvo com Sucesso!</span>
               </>
             ) : (
-              <span>Salvar Alterações</span>
+              <span>{saving ? 'Salvando…' : 'Salvar Alterações'}</span>
             )}
           </button>
         </div>

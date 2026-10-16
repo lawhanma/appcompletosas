@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { NavTab, Product } from "./types";
 import { FinancialProvider, useFinancial } from "./context/FinancialContext";
+import {DailyMissionsProvider} from './context/DailyMissions';
+import {DailyMissionsView} from './components/DailyMissionsView';
 import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
 import { CatalogoView } from "./components/CatalogoView";
@@ -13,11 +15,15 @@ import { PerfilView } from "./components/PerfilView";
 import { AuthScreen } from "./components/AuthScreen";
 import { WhatsAppFloatingButton } from "./components/WhatsAppFloatingButton";
 import { internalDb } from "./utils/internalDb";
+import { supabase } from "./lib/supabase";
+import { CloudAccountGate, useCloudAccount } from "./context/CloudAccount";
 import { DollarSign, CheckCircle2, X } from "lucide-react";
 
 function AppContent() {
+  const cloudAccount = useCloudAccount();
   // Inicialização resiliente com banco de dados interno (evita deslogar rápido / ao recarregar)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    if (cloudAccount) return true;
     const session = internalDb.getActiveSession();
     return !!session?.authenticated;
   });
@@ -29,6 +35,7 @@ function AppContent() {
 
   // Sincroniza e restaura a sessão persistente com o IndexedDB e LocalStorage
   useEffect(() => {
+    if (supabase) return;
     internalDb.initAsyncSession().then((session) => {
       if (session?.authenticated) {
         setIsAuthenticated(true);
@@ -138,7 +145,8 @@ function AppContent() {
         }}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-        onLogout={() => {
+        onLogout={async () => {
+          if (cloudAccount) { await cloudAccount.signOut(); return; }
           internalDb.clearSession();
           setIsAuthenticated(false);
         }}
@@ -156,6 +164,7 @@ function AppContent() {
         {/* Dynamic View Scrollable Container */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto pb-16">
+            {activeTab === 'missoes' && <DailyMissionsView onNavigate={(tab,sub)=>handleNavigateTab(tab,undefined,sub)} />}
             {activeTab === "catalogo" && (
               <CatalogoView onNavigateTab={handleNavigateTab} />
             )}
@@ -195,8 +204,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <FinancialProvider>
-      <AppContent />
-    </FinancialProvider>
+    <CloudAccountGate>
+      <FinancialProvider>
+        <DailyMissionsProvider>
+        <AppContent />
+        </DailyMissionsProvider>
+      </FinancialProvider>
+    </CloudAccountGate>
   );
 }
