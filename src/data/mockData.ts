@@ -110,78 +110,23 @@ export const PRODUCTS: Product[] = RAW_ALL_PRODUCTS.map((p) => ({
   shopeeUrl: getWorkingShopeeUrl(p)
 }));
 
+// Curated selection from the existing catalog; body splash stays at position 2.
 export const MINED_PRODUCTS: Product[] = [
-  // 1. Kit bodySplash infinit e obssesed (Top 1 Viral)
-  {
-    ...PRODUCTS_COSMETICOS[0],
-    shopeeUrl: getWorkingShopeeUrl(PRODUCTS_COSMETICOS[0]),
-    rankBadge: "🔥 #1 EM ALTA",
-    tag: "SUPER LANÇAMENTO"
-  },
-  // 2. Perfume Árabe Asad (R$ 7.3M gerados)
-  {
-    ...PRODUCTS_COSMETICOS[1],
-    shopeeUrl: getWorkingShopeeUrl(PRODUCTS_COSMETICOS[1]),
-    rankBadge: "🔥 #2 MAIS VENDIDO",
-    tag: "ALTA DEMANDA"
-  },
-  // 3. Perfume Árabe Yara (Viral TikTok)
-  {
-    ...PRODUCTS_COSMETICOS[2],
-    shopeeUrl: getWorkingShopeeUrl(PRODUCTS_COSMETICOS[2]),
-    rankBadge: "🔥 #3 VIRAL TIKTOK",
-    tag: "TENDÊNCIA ABSOLUTA"
-  },
-  // 4. Mini Processador Manual (95.000 un vendidas)
-  {
-    ...PRODUCTS_COZINHA[0],
-    shopeeUrl: getWorkingShopeeUrl(PRODUCTS_COZINHA[0]),
-    rankBadge: "🔥 #4 RECORDE SHOPEE",
-    tag: "95.000 VENDIDOS"
-  },
-  // 5. Esponja Gota Soft Velvet (88.000 un vendidas)
-  {
-    ...PRODUCTS_COSMETICOS[12],
-    shopeeUrl: getWorkingShopeeUrl(PRODUCTS_COSMETICOS[12]),
-    rankBadge: "🔥 #5 CAMPEÃO ADIÇÃO",
-    tag: "88.000 VENDIDOS"
-  },
-  // 6. Fita Mágica Dupla Face (88.000 un vendidas)
-  {
-    ...PRODUCTS_UTILIDADES[16],
-    shopeeUrl: getWorkingShopeeUrl(PRODUCTS_UTILIDADES[16]),
-    rankBadge: "🔥 #6 ACHADINHO VIRAL",
-    tag: "SEM FURAR PAREDE"
-  },
-  // 7. Lança Bolhas Bazuca 69 Furos (78.000 un vendidas)
-  {
-    ...PRODUCTS_BRINQUEDOS[20],
-    shopeeUrl: getWorkingShopeeUrl(PRODUCTS_BRINQUEDOS[20]),
-    rankBadge: "🔥 #7 FEBRE TIKTOK",
-    tag: "78.000 VENDIDOS"
-  },
-  // 8. Lip Tint Efeito Natural (72.000 un vendidas)
-  {
-    ...PRODUCTS_COSMETICOS[8],
-    shopeeUrl: getWorkingShopeeUrl(PRODUCTS_COSMETICOS[8]),
-    rankBadge: "🔥 #8 ALTA PROCURA",
-    tag: "72.000 VENDIDOS"
-  },
-  // 9. Sérum Facial Vitamina C (65.000 un vendidas)
-  {
-    ...PRODUCTS_COSMETICOS[3],
-    shopeeUrl: getWorkingShopeeUrl(PRODUCTS_COSMETICOS[3]),
-    rankBadge: "🔥 #9 SKINCARE TOP",
-    tag: "65.000 VENDIDOS"
-  },
-  // 10. Fone Bluetooth TWS Pro (48.000 un vendidas)
-  {
-    ...PRODUCTS_ELETRONICOS[0],
-    shopeeUrl: getWorkingShopeeUrl(PRODUCTS_ELETRONICOS[0]),
-    rankBadge: "🔥 #10 MAIS DESEJADO",
-    tag: "LUCRO RÁPIDO"
-  }
-];
+  PRODUCTS_ELETRONICOS[1],
+  PRODUCTS_COSMETICOS[0],
+  PRODUCTS_COZINHA[2],
+  PRODUCTS_BRINQUEDOS[4],
+  PRODUCTS_ELETRONICOS[5],
+  PRODUCTS_CASA_JARDIM[3],
+  PRODUCTS_UTILIDADES[4],
+  PRODUCTS_COZINHA[7],
+  PRODUCTS_SAZONAIS[1],
+  PRODUCTS_BRINQUEDOS[0],
+].map((product, index) => ({
+  ...product,
+  shopeeUrl: getWorkingShopeeUrl(product),
+  rankBadge: `#${index + 1} TOP 10`,
+}));
 
 export const NICHES = [
   "Todos",
