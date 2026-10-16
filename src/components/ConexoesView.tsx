@@ -195,6 +195,15 @@ export const ConexoesView: React.FC<ConexoesViewProps> = () => {
       {/* Main Integration Card */}
       <div className="max-w-xl mx-auto">
         <div className="bg-white rounded-xl border border-slate-200/80 p-5 sm:p-7 shadow-xs space-y-5">
+          {activeChannel === 'shopee' && (
+            <div className="rounded-lg border border-orange-100 bg-orange-50 p-3.5 text-xs leading-relaxed">
+              <p className="text-slate-700">Ainda não criou sua conta como afiliado da Shopee?</p>
+              <a href="https://affiliate.shopee.com.br" target="_blank" rel="noopener noreferrer"
+                className="mt-1 inline-flex font-semibold text-[#EE4D2D] underline underline-offset-2 hover:text-orange-700">
+                Clique para criar agora!
+              </a>
+            </div>
+          )}
           {!isCurrentConnected ? (
             <>
               {/* Notice Callout */}
