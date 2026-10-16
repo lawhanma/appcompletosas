@@ -23,10 +23,9 @@ import {
   Loader2,
   AlertCircle
 } from "lucide-react";
-import { useShopeeAffiliation } from "../utils/useShopeeAffiliation";
-import { AffiliationLoadingModal } from "./AffiliationLoadingModal";
-import { getWorkingShopeeUrl } from "../utils/shopee";
 import {useDailyMissions} from '../context/DailyMissions';
+import {AffiliateLinkField} from './AffiliateLinkField';
+import {validateAffiliateLink} from '../utils/affiliateLink';
 
 interface DivulgacaoAutomaticaModalProps {
   product: Product | null;
@@ -53,7 +52,7 @@ interface SocialPlatformStatus {
 }
 
 export const DivulgacaoAutomaticaModal: React.FC<DivulgacaoAutomaticaModalProps> = (props) =>
-  props.isOpen && props.product ? <ActiveDivulgacaoModal {...props} product={props.product} /> : null;
+  props.isOpen && props.product ? <ActiveDivulgacaoModal key={props.product.id} {...props} product={props.product} /> : null;
 
 const CAMPAIGN_SALES = {kwai: 4, tiktok: 7, facebook: 2, whatsapp: 5, instagram: 3, twitter: 1};
 
@@ -65,18 +64,10 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
 }) => {
   const { addCommission, userCode, state } = useFinancial();
   const {record} = useDailyMissions();
-  const { isAffiliated, markProductAsAffiliated } = useShopeeAffiliation();
-  const [isAffiliationLoadingOpen, setIsAffiliationLoadingOpen] = useState(false);
+  const [affiliateLink,setAffiliateLink] = useState('');
+  const [campaignLink,setCampaignLink] = useState('');
+  const [linkError,setLinkError] = useState('');
 
-
-  const productAffiliated = isAffiliated(product.id);
-
-  const handleCompleteAffiliation = () => {
-    markProductAsAffiliated(product.id);
-    setIsAffiliationLoadingOpen(false);
-    const targetUrl = getWorkingShopeeUrl(product);
-    window.open(targetUrl, "_blank", "noopener,noreferrer");
-  };
 
   // Workflow phases: "idle" | "loading" | "posting" | "results"
   const [phase, setPhase] = useState<"idle" | "loading" | "posting" | "results">("idle");
@@ -196,6 +187,9 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
 
   // Start automated distribution process
   const startDistribution = () => {
+    const validLink = validateAffiliateLink(affiliateLink);
+    if (!validLink) {setLinkError('Cole um link de afiliado válido, começando com https:// ou http://.');return;}
+    setLinkError('');setCampaignLink(validLink);
     setPhase("loading");
     setLoadingStepIndex(0);
     setRecentSalesNotification(null);
@@ -207,7 +201,8 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
       progress: 0,
       views: 0,
       likes: 0,
-      salesCount: 0
+      salesCount: 0,
+      sampleCopy: `${p.sampleCopy.split('\n\nLink de afiliado:')[0]}\n\nLink de afiliado: ${validLink}`
     })));
   };
 
@@ -336,6 +331,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
   const handleCopyReport = () => {
     const reportText = `🚀 RELATÓRIO DE DIVULGAÇÃO AUTOMÁTICA COM IA\n` +
       `📦 Produto: ${product.name}\n` +
+      `🔗 Link de afiliado: ${campaignLink}\n` +
       `💰 Preço: R$ ${product.price.toFixed(2).replace(".", ",")}\n` +
       `🔥 Vendas Realizadas: ${totalSales} vendas\n` +
       `💵 Faturamento Total: R$ ${totalRevenue.toFixed(2).replace(".", ",")}\n` +
@@ -434,38 +430,6 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
             </div>
           </div>
 
-          {/* BARREIRA DE AFILIAÇÃO OBRIGATÓRIA */}
-          {!productAffiliated ? (
-            <div className="p-8 rounded-3xl bg-red-50/80 border border-red-200 text-center space-y-4 max-w-lg mx-auto my-6 animate-in zoom-in-95">
-              <div className="w-16 h-16 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mx-auto border border-red-200">
-                <AlertCircle className="w-8 h-8" />
-              </div>
-              <div>
-                <span className="inline-block px-2.5 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-bold uppercase tracking-wider mb-1">
-                  AFILIAÇÃO OBRIGATÓRIA
-                </span>
-                <h3 className="text-lg font-bold text-slate-900 font-display">
-                  Você precisa se afiliar a este produto primeiro!
-                </h3>
-                <p className="text-xs text-slate-600 mt-1 max-w-sm mx-auto leading-relaxed">
-                  Para realizar a divulgação automática nas 6 redes sociais e faturar comissões no seu saldo, é obrigatório ativar a afiliação na Shopee.
-                </p>
-              </div>
-
-              <div className="pt-2 flex flex-col sm:flex-row gap-2.5 justify-center">
-                <button
-                  type="button"
-                  onClick={() => setIsAffiliationLoadingOpen(true)}
-                  className="py-3 px-6 rounded-xl bg-[#EE4D2D] hover:bg-[#E03A17] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 cursor-pointer transition-all active:scale-[0.99]"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>SE AFILIAR A ESTE PRODUTO AGORA</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
               {/* ========================================================= */}
               {/* STATE 1: IDLE (Pre-launch screen)                         */}
               {/* ========================================================= */}
@@ -512,6 +476,8 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
                   Nossa inteligência artificial irá achar o público comprador, capturar o vídeo e criativo de alta conversão, gerar as copies persuasivas e publicar nos 6 canais com seu link de afiliado.
                 </p>
               </div>
+
+              <AffiliateLinkField value={affiliateLink} onChange={value=>{setAffiliateLink(value);setLinkError('');}} error={linkError}/>
 
               {/* Grid of 6 Platforms badges */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -799,6 +765,8 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
                 </div>
               </div>
 
+              <div className="rounded-xl border border-slate-200 p-4 text-xs text-slate-600 break-all">Link utilizado na campanha: <a href={campaignLink} target="_blank" rel="noopener noreferrer" className="text-[#EE4D2D] underline">{campaignLink}</a></div>
+
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
                 <button
@@ -846,19 +814,9 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
               </div>
             </div>
           )}
-            </>
-          )}
         </div>
       </div>
 
-      {isAffiliationLoadingOpen && (
-        <AffiliationLoadingModal
-          product={product}
-          isOpen={isAffiliationLoadingOpen}
-          onComplete={handleCompleteAffiliation}
-          onClose={() => setIsAffiliationLoadingOpen(false)}
-        />
-      )}
     </div>
   );
 };

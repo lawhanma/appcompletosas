@@ -19,9 +19,6 @@ import {
 } from "lucide-react";
 import { DivulgacaoAutomaticaModal } from "./DivulgacaoAutomaticaModal";
 import { ShopeeAffiliateAction } from "./ShopeeAffiliateAction";
-import { AffiliationLoadingModal } from "./AffiliationLoadingModal";
-import { useShopeeAffiliation } from "../utils/useShopeeAffiliation";
-import { getWorkingShopeeUrl } from "../utils/shopee";
 
 interface ProductMetricsModalProps {
   product: Product | null;
@@ -36,34 +33,13 @@ export const ProductMetricsModal: React.FC<ProductMetricsModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<"metricas" | "afiliar" | "anuncio" | "divulgacao-ia">("metricas");
   const [isAutoPostingOpen, setIsAutoPostingOpen] = useState(false);
-  const [showAffiliationRequiredModal, setShowAffiliationRequiredModal] = useState(false);
-  const [isAffiliationLoadingOpen, setIsAffiliationLoadingOpen] = useState(false);
 
-  const { isAffiliated, markProductAsAffiliated } = useShopeeAffiliation();
   const {record} = useDailyMissions();
   useEffect(() => {if (product) record('product',product.id);},[product?.id,record]);
 
   if (!product) return null;
 
   const handleOpenAutoPosting = () => {
-    if (!isAffiliated(product.id)) {
-      setShowAffiliationRequiredModal(true);
-      return;
-    }
-    setIsAutoPostingOpen(true);
-  };
-
-  const handleStartAffiliationFromModal = () => {
-    setShowAffiliationRequiredModal(false);
-    setIsAffiliationLoadingOpen(true);
-  };
-
-  const handleCompleteAffiliation = () => {
-    markProductAsAffiliated(product.id);
-    setIsAffiliationLoadingOpen(false);
-    const targetUrl = getWorkingShopeeUrl(product);
-    window.open(targetUrl, "_blank", "noopener,noreferrer");
-    // Após afiliar, abre a divulgação automática
     setIsAutoPostingOpen(true);
   };
 
@@ -498,91 +474,6 @@ export const ProductMetricsModal: React.FC<ProductMetricsModalProps> = ({
           </div>
         </div>
       </div>
-
-      {/* MODAL DE ERRO: PRODUTO NÃO AFILIADO NA DIVULGAÇÃO AUTOMÁTICA */}
-      {showAffiliationRequiredModal && (
-        <div 
-          className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-150"
-          onClick={() => setShowAffiliationRequiredModal(false)}
-        >
-          <div 
-            className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-red-200 overflow-hidden p-6 space-y-4 animate-in zoom-in-95 duration-150"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header with error icon */}
-            <div className="text-center space-y-2">
-              <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto border border-red-100">
-                <AlertCircle className="w-6 h-6" />
-              </div>
-              <div>
-                <span className="inline-block px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold tracking-wider uppercase mb-1">
-                  AFILIAÇÃO OBRIGATÓRIA
-                </span>
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 font-display">
-                  Você precisa se afiliar a este produto primeiro!
-                </h3>
-                <p className="text-xs text-slate-600 max-w-sm mx-auto mt-1 leading-relaxed">
-                  Para fazer a divulgação automática e garantir que todas as comissões entrem no seu saldo, é obrigatório se afiliar ao produto antes de divulgar.
-                </p>
-              </div>
-            </div>
-
-            {/* Product card recap */}
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 overflow-hidden shrink-0">
-                <img 
-                  src={product.imageUrl} 
-                  alt={product.name}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover" 
-                />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-xs font-semibold text-slate-900 truncate">
-                  {product.name}
-                </div>
-                <div className="text-[11px] text-slate-500">
-                  Comissão: <strong className="text-emerald-700">{product.commissionRate}%</strong> (R$ {product.commissionValue.toFixed(2).replace(".", ",")}/venda)
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="space-y-2 pt-1">
-              <button
-                type="button"
-                onClick={handleStartAffiliationFromModal}
-                className="w-full py-3 px-4 rounded-xl bg-[#EE4D2D] hover:bg-[#E03A17] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-colors cursor-pointer active:scale-[0.99]"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>SE AFILIAR A ESTE PRODUTO AGORA</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAffiliationRequiredModal(false);
-                  setActiveTab("afiliar");
-                }}
-                className="w-full py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-medium transition-colors cursor-pointer"
-              >
-                Ir para a aba Afiliar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Loading Animation Modal when triggered from Affiliation Required */}
-      {isAffiliationLoadingOpen && (
-        <AffiliationLoadingModal
-          product={product}
-          isOpen={isAffiliationLoadingOpen}
-          onComplete={handleCompleteAffiliation}
-          onClose={() => setIsAffiliationLoadingOpen(false)}
-        />
-      )}
 
       {/* Multi-Platform Auto Posting & Sales Results Simulation Modal */}
       <DivulgacaoAutomaticaModal
