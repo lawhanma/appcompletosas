@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Product } from "../types";
 import { PRODUCTS, MINED_PRODUCTS } from "../data/mockData";
+import { normalizeGroupLink } from "../utils/groupLink";
 import { getWorkingShopeeUrl } from "../utils/shopee";
 import { 
   OFFER_GROUPS, 
@@ -80,9 +81,9 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
   const [joinedGroupIds, setJoinedGroupIds] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem("shopnext_joined_groups");
-      return saved ? JSON.parse(saved) : ["fb-pub-1", "fb-pub-2", "wa-1"];
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return ["fb-pub-1", "fb-pub-2", "wa-1"];
+      return [];
     }
   });
 
@@ -154,7 +155,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
   };
 
   // Combine default offer groups + custom user groups
-  const allGroups: FacebookGroup[] = [...OFFER_GROUPS, ...customGroups];
+  const allGroups: FacebookGroup[] = [...OFFER_GROUPS, ...customGroups].filter(group => normalizeGroupLink(group.groupUrl, group.platform));
 
   // Filter groups
   const filteredGroups = allGroups.filter((g) => {
@@ -231,25 +232,12 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
 
   // Helper to ensure valid and normalized group URLs
   const formatGroupUrl = (url: string): string => {
-    if (!url) return "#";
-    let trimmed = url.trim();
-    if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
-      trimmed = `https://${trimmed}`;
-    }
-    if (trimmed.includes("chat.whatsapp.com/invite/")) {
-      trimmed = trimmed.replace("chat.whatsapp.com/invite/", "chat.whatsapp.com/");
-    }
-    return trimmed;
+    return normalizeGroupLink(url) || "#";
   };
 
   // Open Group Link directly in new window
   const handleOpenGroupLink = (group: FacebookGroup, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-
-    // Make sure to add to joined groups if not yet
-    if (!joinedGroupIds.includes(group.id)) {
-      handleToggleMembership(group.id);
-    }
 
     const targetUrl = formatGroupUrl(group.groupUrl);
     window.open(targetUrl, "_blank", "noopener,noreferrer");
@@ -456,6 +444,12 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
       return;
     }
 
+    const validatedUrl = normalizeGroupLink(newGroupUrl, newGroupPlatform);
+    if (!validatedUrl) {
+      alert("Cole um link de grupo válido da plataforma selecionada. No WhatsApp, use o convite completo copiado do aplicativo.");
+      return;
+    }
+
     const newGroup: FacebookGroup = {
       id: `custom-${Date.now()}`,
       name: newGroupName.trim(),
@@ -463,13 +457,12 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
       members: newGroupMembers.trim() || "Grupo Particular",
       dailyPosts: "Publicações sob demanda",
       description: "Grupo pessoal adicionado pelo afiliado para disparos rápidos e acompanhamento de vendas.",
-      rules: "Seu próprio grupo: você tem total liberdade para postar quantas ofertas desejar por dia!",
-      groupUrl: formatGroupUrl(newGroupUrl.trim()),
+      rules: "Confira as regras e sua permissão para publicar neste grupo.",
+      groupUrl: validatedUrl,
       badge: "⭐ Meu Grupo",
       recommendedTime: "12:00 e 20:00",
       category: newGroupCategory,
-      conversionRate: "15.0% conversão",
-      isVerified: true
+      isVerified: false
     };
 
     const updated = [newGroup, ...customGroups];
@@ -521,7 +514,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
           </h2>
 
           <p className="text-xs text-slate-300 leading-relaxed">
-            Entre nos maiores grupos de achadinhos do Brasil (+1.7M de membros ativos) e faça publicações em 1 clique com copies persuasivas, preços De/Por e seu link oficial de afiliado.
+            Encontre grupos para divulgação e cadastre seus próprios convites. Os links do catálogo foram conferidos em 18/10/2026; acesso e publicação dependem das regras de cada grupo.
           </p>
         </div>
 
@@ -589,28 +582,28 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
 
         <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 uppercase">Alcance Potencial</span>
+            <span className="text-xs font-medium text-slate-500 uppercase">Última conferência</span>
             <div className="w-7 h-7 rounded-lg bg-orange-50 text-[#EE4D2D] flex items-center justify-center">
               <Flame className="w-3.5 h-3.5" />
             </div>
           </div>
           <div className="text-xl font-bold font-mono-code text-slate-900 mt-2">
-            +1.720.000
+            18/10/2026
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5 font-medium">Membros e compradores reais</p>
+          <p className="text-[11px] text-slate-400 mt-0.5 font-medium">Prévia do grupo na plataforma</p>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 uppercase">Conversão Média</span>
+            <span className="text-xs font-medium text-slate-500 uppercase">Permissão para postar</span>
             <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <TrendingUp className="w-3.5 h-3.5" />
             </div>
           </div>
           <div className="text-xl font-bold font-mono-code text-emerald-600 mt-2">
-            13.4%
+            Consulte o grupo
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5 font-medium">Taxa média de compra por clique</p>
+          <p className="text-[11px] text-slate-400 mt-0.5 font-medium">Confira as regras dos administradores</p>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs">
@@ -621,9 +614,9 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
             </div>
           </div>
           <div className="text-xl font-bold font-mono-code text-slate-900 mt-2">
-            {joinedGroupIds.length} Grupos
+            {allGroups.filter(group => joinedGroupIds.includes(group.id)).length} Grupos
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5 font-medium">Salvos para disparo imediato</p>
+          <p className="text-[11px] text-slate-400 mt-0.5 font-medium">Marcados por você como membro</p>
         </div>
       </div>
 
@@ -1090,7 +1083,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
                 <div className="flex items-center gap-2">
                   <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    100% Públicos • Feed Aberto
+                    Buscar grupos no Facebook
                   </span>
                   <span className="text-xs text-blue-200/90 font-bold">
                     {allGroups.filter(g => g.platform === "facebook" && g.isPublic).length} Grupos Mapeados
@@ -1100,7 +1093,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
                   Grupos Públicos de Ofertas & Achadinhos no Facebook
                 </h3>
                 <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
-                  Estes grupos possuem <strong>visualização pública e postagens abertas</strong>: você entra de imediato e pode publicar suas ofertas ou comentar nos posts com seu link de afiliado sem ter que aguardar aprovação de moderador!
+                  Use as buscas abaixo para encontrar comunidades. O Facebook pode exigir login; entrada e publicação dependem dos administradores. Somente adicione o link direto depois de conferir o grupo.
                 </p>
               </div>
             </div>
@@ -1240,7 +1233,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
                     </span>
                     <span>•</span>
                     <span className="text-emerald-600 font-bold">
-                      {group.conversionRate || "12.0% conversão"}
+                      {group.lastCheckedAt ? "Prévia conferida em 18/10/2026" : "Adicionado por você"}
                     </span>
                   </div>
                 </div>
@@ -1250,11 +1243,15 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
                   {group.description}
                 </p>
 
+                {group.sourceUrl && (
+                  <a href={group.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline">Consultar fonte e regras</a>
+                )}
+
                 {/* Rule hint */}
                 <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-[11px] text-slate-600 space-y-1">
                   <div className="flex items-center gap-1 text-slate-500 font-bold">
                     <Clock className="w-3 h-3 text-orange-500" />
-                    <span>Melhor horário: {group.recommendedTime}</span>
+                    <span>Publicação: {group.recommendedTime}</span>
                   </div>
                   <p className="text-slate-500 text-[10px] italic">
                     Regra: {group.rules}
@@ -1739,7 +1736,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
                 <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-900 text-xs flex items-start gap-2.5">
                   <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                   <p className="leading-relaxed">
-                    O robô do Shop GO irá publicar a oferta nos <strong>{allGroups.length} grupos parceiros</strong> com criativos automáticos, links rastreados de afiliado e preços De/Por para gerar tráfego e vendas imediatas.
+                    O robô do Shop GO irá publicar a oferta nos <strong>{allGroups.length} grupos da sua lista</strong> com criativos automáticos, links rastreados de afiliado e preços De/Por para gerar tráfego e vendas imediatas.
                   </p>
                 </div>
 
