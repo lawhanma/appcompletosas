@@ -848,7 +848,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
 
             <div className="shrink-0">
               <a
-                href="https://www.facebook.com/groups/search/groups/?q=achadinhos%20shopee%20ofertas"
+                href="https://www.facebook.com/search/groups/?q=achadinhos%20shopee%20ofertas"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-4 py-2.5 rounded-xl bg-[#1877F2] hover:bg-[#1565C0] text-white text-xs font-black shadow-md shadow-blue-500/30 transition-all flex items-center gap-2 cursor-pointer hover:scale-[1.02] whitespace-nowrap"

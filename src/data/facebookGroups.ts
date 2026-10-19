@@ -144,25 +144,25 @@ export const FACEBOOK_PUBLIC_SEARCHES: FacebookSearchQuery[] = [
   {
     title: "Achadinhos Shopee (Grupos Públicos)",
     query: "achadinhos shopee ofertas",
-    url: "https://www.facebook.com/groups/search/groups/?q=achadinhos%20shopee%20ofertas",
+    url: "https://www.facebook.com/search/groups/?q=achadinhos%20shopee%20ofertas",
     description: "Busca de grupos no Facebook; verifique existência, privacidade e regras antes de entrar"
   },
   {
     title: "Ofertas e Cupons Shopee Brasil",
     query: "ofertas cupons shopee brasil",
-    url: "https://www.facebook.com/groups/search/groups/?q=ofertas%20cupons%20shopee%20brasil",
+    url: "https://www.facebook.com/search/groups/?q=ofertas%20cupons%20shopee%20brasil",
     description: "Encontre comunidades públicas com foco em cupons de desconto e frete grátis"
   },
   {
     title: "Achados até 50 Reais Shopee",
     query: "achadinhos shopee ate 50 reais",
-    url: "https://www.facebook.com/groups/search/groups/?q=achadinhos%20shopee%20ate%2050%20reais",
+    url: "https://www.facebook.com/search/groups/?q=achadinhos%20shopee%20ate%2050%20reais",
     description: "Busca de grupos de produtos até R$ 50; permissões dependem dos administradores"
   },
   {
     title: "Achadinhos Casa e Cozinha Shopee",
     query: "achadinhos casa cozinha shopee",
-    url: "https://www.facebook.com/groups/search/groups/?q=achadinhos%20casa%20cozinha%20shopee",
+    url: "https://www.facebook.com/search/groups/?q=achadinhos%20casa%20cozinha%20shopee",
     description: "Grupos de donas de casa e decoração com alta procura por utensílios e organizadores"
   }
 ];
