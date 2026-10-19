@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import {useDailyMissions} from '../context/DailyMissions';
 import {AffiliateLinkField} from './AffiliateLinkField';
+import {CreditRenewalModal} from "./CreditRenewalModal";
 import {validateAffiliateLink} from '../utils/affiliateLink';
 
 interface DivulgacaoAutomaticaModalProps {
@@ -62,7 +63,8 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
   onClose,
   onNavigateToFinancial
 }) => {
-  const { addCommission, userCode, state } = useFinancial();
+  const { addCommission, userCode, state, consumeAiCredit } = useFinancial();
+  const [renewalOpen, setRenewalOpen] = useState(false);
   const {record} = useDailyMissions();
   const [affiliateLink,setAffiliateLink] = useState('');
   const [campaignLink,setCampaignLink] = useState('');
@@ -187,6 +189,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
 
   // Start automated distribution process
   const startDistribution = () => {
+    if (state.aiCredits <= 0) {setRenewalOpen(true);return;}
     const validLink = validateAffiliateLink(affiliateLink);
     if (!validLink) {setLinkError('Cole um link de afiliado válido, começando com https:// ou http://.');return;}
     setLinkError('');setCampaignLink(validLink);
@@ -311,6 +314,8 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
               Object.values(CAMPAIGN_SALES).reduce((a,b)=>a+b,0)
             );
           }
+          consumeAiCredit();
+          if (state.aiCredits <= 1) setRenewalOpen(true);
           setPhase("results");
           record('campaign',`${product.id}:${Date.now()}`);
         }, 1500);
@@ -347,6 +352,8 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
   };
 
   return (
+    <>
+      {renewalOpen && <CreditRenewalModal onClose={() => setRenewalOpen(false)} />}
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
       <div 
         className="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col my-auto max-h-[92vh]"
@@ -818,5 +825,6 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
       </div>
 
     </div>
+    </>
   );
 };

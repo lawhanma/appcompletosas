@@ -5,6 +5,7 @@ import { useFinancial } from "../context/FinancialContext";
 import {useDailyMissions} from '../context/DailyMissions';
 import {AffiliateLinkField} from './AffiliateLinkField';
 import {validateAffiliateLink} from '../utils/affiliateLink';
+import {CreditRenewalModal} from "./CreditRenewalModal";
 import { GruposOfertasView } from "./GruposOfertasView";
 import { 
   Sparkles, 
@@ -33,6 +34,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
   defaultSubTab = "automatica"
 }) => {
   const { state, userCode, isVip, addCommission, consumeAiCredit } = useFinancial();
+  const [renewalOpen, setRenewalOpen] = useState(false);
   const dailyCredits = isVip ? 5 : 4;
   const {record} = useDailyMissions();
 
@@ -120,14 +122,10 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
 
   // Run Automated Posting Simulation (~30s realistic sequential process)
   const handleStartAutoPosting = () => {
+    if (state.aiCredits <= 0) {setRenewalOpen(true);return;}
     const campaignLink = validateAffiliateLink(affiliateLink);
     if (!campaignLink) {setLinkError('Cole um link de afiliado válido, começando com https:// ou http://.');return;}
     setLinkError('');
-
-    if (state.aiCredits <= 0) {
-      alert("Seus 4 créditos diários de IA foram utilizados. Eles renovam à meia-noite!");
-      return;
-    }
 
     clearAllTimers();
     setIsPosting(true);
@@ -285,12 +283,15 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
         );
       }
       setIsPosting(false);
+      if (state.aiCredits <= 1) setRenewalOpen(true);
       record('campaign',`${selectedProduct.id}:${Date.now()}`);
     }, 30800);
   };
 
   return (
     <div className="space-y-6">
+      {renewalOpen && <CreditRenewalModal onClose={() => setRenewalOpen(false)} />}
+      {state.aiCredits <= 0 && !isPosting && <button type="button" onClick={() => setRenewalOpen(true)} className="w-full rounded-xl bg-orange-50 border border-orange-200 p-4 text-sm font-semibold text-orange-700">Seus créditos acabaram — renovar créditos</button>}
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-3.5 py-2.5 rounded-lg shadow-lg flex items-center gap-2 text-xs font-medium animate-in fade-in">
@@ -367,7 +368,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
                 <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                   <div 
                     className="bg-[#EE4D2D] h-full rounded-full transition-all duration-300"
-                    style={{ width: `${(state.aiCredits / 4) * 100}%` }}
+                    style={{ width: `${Math.min(100, (state.aiCredits / dailyCredits) * 100)}%` }}
                   />
                 </div>
               </div>
@@ -742,7 +743,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
                   <div className="flex justify-center">
                     <button
                       onClick={handleStartAutoPosting}
-                      disabled={isPosting || state.aiCredits <= 0}
+                      disabled={isPosting}
                       className="w-full sm:w-auto min-w-[260px] py-2.5 px-6 rounded-lg bg-[#EE4D2D] hover:bg-[#E03A17] text-white font-medium text-xs shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
                     >
                       <Play className="w-3.5 h-3.5 fill-white" />
