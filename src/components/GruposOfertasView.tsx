@@ -9,7 +9,9 @@ import {
   GroupPlatform,
   FACEBOOK_PUBLIC_SEARCHES
 } from "../data/facebookGroups";
-import { useFinancial } from "../context/FinancialContext";
+import { AffiliateLinkField } from "./AffiliateLinkField";
+import { validateAffiliateLink } from "../utils/affiliateLink";
+import { GroupPublishingQueue } from "./GroupPublishingQueue";
 import { 
   Users, 
   ExternalLink, 
@@ -47,12 +49,14 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
   initialProduct,
   onOpenVideoCreator
 }) => {
-  const { addCommission, userCode, state } = useFinancial();
+  const [affiliateLink, setAffiliateLink] = useState("");
+  const [affiliateError, setAffiliateError] = useState("");
 
   // Selected product to publish
   const [selectedProduct, setSelectedProduct] = useState<Product>(
     initialProduct || PRODUCTS.find(p => p.name.includes("Fone Bluetooth")) || PRODUCTS[0]
   );
+  useEffect(() => { setAffiliateLink(""); setAffiliateError(""); }, [selectedProduct.id]);
   const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
   const [productSearchQuery, setProductSearchQuery] = useState("");
 
@@ -63,20 +67,8 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
   const [membershipFilter, setMembershipFilter] = useState<"todos" | "membro" | "novos">("todos");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Mass automated broadcasting state (Disparo em Todos os Grupos)
+  // Mass automated broadcasting state (Sequência de grupos)
   const [isMassPostingOpen, setIsMassPostingOpen] = useState(false);
-  const [isMassPostingRunning, setIsMassPostingRunning] = useState(false);
-  const [massProgress, setMassProgress] = useState(0);
-  const [massStatusText, setMassStatusText] = useState("");
-  const [massCompletedGroupIds, setMassCompletedGroupIds] = useState<string[]>([]);
-  const [massResult, setMassResult] = useState<{
-    totalGroups: number;
-    totalViews: number;
-    totalClicks: number;
-    totalSales: number;
-    totalCommission: number;
-  } | null>(null);
-
   // Joined groups state stored in localStorage
   const [joinedGroupIds, setJoinedGroupIds] = useState<string[]>(() => {
     try {
@@ -102,17 +94,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
   const [copyStyle, setCopyStyle] = useState<"urgencia" | "review" | "cupom" | "viral">("urgencia");
   const [customCopyText, setCustomCopyText] = useState<string>("");
 
-  // Automated posting simulation state
-  const [isSendingPost, setIsSendingPost] = useState(false);
-  const [postProgress, setPostProgress] = useState(0);
-  const [postStatusText, setPostStatusText] = useState("");
-  const [postSuccessData, setPostSuccessData] = useState<{
-    groupName: string;
-    views: number;
-    clicks: number;
-    commission: number;
-    salesCount: number;
-  } | null>(null);
+  const isSendingPost = false;
 
   // New Group Modal
   const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
@@ -161,7 +143,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
   const filteredGroups = allGroups.filter((g) => {
     const matchesPlatform = platformFilter === "todos" || g.platform === platformFilter;
     const matchesCategory = categoryFilter === "Todos" || g.category === categoryFilter;
-    const matchesPrivacy = privacyFilter === "todos" || (privacyFilter === "publicos" && g.isPublic !== false);
+    const matchesPrivacy = privacyFilter === "todos" || (privacyFilter === "publicos" && g.isPublic === true);
     const isMember = joinedGroupIds.includes(g.id);
     const matchesMembership = 
       membershipFilter === "todos" || 
@@ -177,39 +159,10 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
 
   // Calculate dynamic copy based on product, style and platform
   const generateCopyForProduct = (prod: Product, style: string, platform?: GroupPlatform) => {
-    const affiliateTag = userCode ? `ref=shopnext_${userCode}` : "ref=shopnext_app";
-    const affiliateLink = `https://shopee.com.br/universal-link/${prod.id}?${affiliateTag}`;
-    const priceFormatted = `R$ ${prod.price.toFixed(2).replace(".", ",")}`;
-    const originalFormatted = `R$ ${prod.originalPrice.toFixed(2).replace(".", ",")}`;
-
-    if (platform === "whatsapp") {
-      if (style === "urgencia") {
-        return `🚨 *CORRE GENTE, TÁ ACABANDO RÁPIDO!* 😱\n\n*${prod.name}* com cupom de *${prod.discountPercentage}% OFF* na Shopee!\n\n❌ De ~${originalFormatted}~\n✅ *Por apenas ${priceFormatted}* (com Frete Grátis) 📦\n\n⭐ Avaliação: 4.9/5 estrelas (+ de ${prod.unitsSold} vendidas)\n💬 *Depoimento:* "${prod.description}"\n\n👉 *Link Oficial com Desconto Aplicado:*\n${affiliateLink}\n\n⚠️ _Dica: Aplique o cupom de frete grátis antes de fechar o pedido!_`;
-      }
-      if (style === "review") {
-        return `Meninas(os), olha o que acabou de chegar pra mim! ✨😍\n\nComprei o *${prod.name}* na Shopee e simplesmente me surpreendeu demais, a qualidade é de outro nível!\n\nConsegui pegar numa super promoção por *${priceFormatted}* (custava ${originalFormatted})!\n\nVou deixar o link de onde comprei pro pessoal que pediu:\n👇👇\n${affiliateLink}\n\n🚚 Chegou super rápido e bem embalado. Recomendo muito!`;
-      }
-      if (style === "cupom") {
-        return `🔥 *CUPOM SECRETO SHOPEE LIBERADO!* 🔥\n\nItem: *${prod.name}*\n🏷️ Desconto: *${prod.discountPercentage}% OFF*\n💰 Valor final: *${priceFormatted}*\n🚚 *Frete Grátis Disponível*\n\n🛒 *Resgate o seu no link oficial:*\n${affiliateLink}\n\nQuem for comprar comenta *"QUERO"* se precisar de ajuda com cupom!`;
-      }
-      return `📱 *Aquele produtinho que viralizou no TikTok tá na PROMOÇÃO!* 🔥\n\n*${prod.name}*\nDe ~${originalFormatted}~ por *${priceFormatted}*!\n\n👉 Compre no link seguro da Shopee:\n${affiliateLink}`;
-    }
-
-    if (platform === "facebook") {
-      if (style === "urgencia") {
-        return `🚨 ACHADINHO URGENTE NA SHOPEE! 😱\n\n📦 ${prod.name}\n\n❌ De: ${originalFormatted}\n✅ Por APENAS: ${priceFormatted} com Frete Grátis 🚚\n\n⭐ Avaliação: 4.9/5 estrelas (+ de ${prod.unitsSold} pedidos)\n📦 Estoque com envio rápido do Brasil!\n\n👇 LINK COM DESCONTO APLICADO:\n👉 ${affiliateLink}\n\n💬 Comente "EU QUERO" que envio o link no seu chat!\n\n#achadinhos #shopee #achadinhosshopee #ofertasshopee #promocao #cupons`;
-      }
-      if (style === "review") {
-        return `Gente, precisava vir compartilhar esse achado com vocês! ✨🥰\n\nComprei o ${prod.name} na Shopee e simplesmente me apaixonei pela qualidade!\n\nConsegui pegar numa super promoção por apenas ${priceFormatted} (custava ${originalFormatted})! 💸\n\nO link seguro do fornecedor oficial é esse aqui:\n👉 ${affiliateLink}\n\nChegou super rápido e bem embalado. Quem já comprou também amou? Deixem aí nos comentários! 👇✨\n\n#shopee #achadinhos #resenhasincera #comprinhas #achadinhosshopee`;
-      }
-      if (style === "cupom") {
-        return `🔥 CUPOM DE DESCONTO SHOPEE 2026 LIBERADO! 🔥\n\n🛍️ ${prod.name}\n💥 Desconto: ${prod.discountPercentage}% OFF\n💵 Valor final: APENAS ${priceFormatted}\n🚚 Frete Grátis disponível!\n\n🛒 Garanta o seu antes que esgote o lote promocional:\n👉 ${affiliateLink}\n\n💬 Comente "CUPOM" para receber o código!\n\n#cuponsshopee #shopeebr #promocao #achadinhos #descontos`;
-      }
-      return `📱 AQUELE ACHADINHO QUE BOMBOU NO TIKTOK TÁ NA PROMOÇÃO NA SHOPEE! 🔥\n\n${prod.name}\nDe ${originalFormatted} por apenas ${priceFormatted}!\n\n👉 Link oficial com desconto aplicado:\n${affiliateLink}\n\n#achadinhos #tiktokmademebuyit #shopee #viral #achadinhosshopee`;
-    }
-
-    // Telegram / Default
-    return `⚡️ *OFERTA RELÂMPAGO SHOPEE*\n\n🛍 *${prod.name}*\n\n❌ De: ${originalFormatted}\n✅ *Por apenas: ${priceFormatted}*\n🔥 Desconto: ${prod.discountPercentage}% OFF\n🚚 Frete Grátis Disponível\n\n🔗 *Compre com desconto aqui:*\n${affiliateLink}`;
+    const link = validateAffiliateLink(affiliateLink) || "[Informe seu link de afiliado]";
+    const price = prod.price.toLocaleString("pt-BR", {style: "currency", currency: "BRL"});
+    const heading = style === "cupom" ? "Confira esta oferta" : style === "review" ? "Um achado para conhecer" : style === "viral" ? "Achadinho do dia" : "Oferta para conferir";
+    return `${heading}\n\n${prod.name}\nPreço no catálogo: ${price}\n\n${link}\n\nConfira preço, frete e disponibilidade no anúncio. Link de afiliado: posso receber comissão pela compra.`;
   };
 
   // Sync custom copy when product, style, or active group changes
@@ -220,14 +173,21 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
       activeGroupForPublishing?.platform || "facebook"
     );
     setCustomCopyText(text);
-  }, [selectedProduct, copyStyle, activeGroupForPublishing]);
+  }, [selectedProduct, copyStyle, activeGroupForPublishing, affiliateLink]);
 
   // Copy text to clipboard
-  const handleCopyText = (text: string, key: string = "copy") => {
-    navigator.clipboard.writeText(text);
-    setCopiedKey(key);
-    showToast("Texto copiado para a área de transferência!");
-    setTimeout(() => setCopiedKey(null), 2500);
+  const handleCopyText = async (text: string, key: string = "copy") => {
+    if (!validateAffiliateLink(affiliateLink)) {
+      setAffiliateError("Informe seu link de afiliado antes de copiar ou divulgar.");
+      showToast("Preencha o campo de link de afiliado.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      showToast("Texto copiado. Revise e publique no grupo.");
+      setTimeout(() => setCopiedKey(null), 2500);
+    } catch { showToast("Não foi possível copiar. Selecione o texto e copie manualmente."); }
   };
 
   // Helper to ensure valid and normalized group URLs
@@ -244,197 +204,30 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
     showToast(`Redirecionando para o grupo específico: ${group.name}`);
   };
 
-  // Copy Facebook Copy and open group
+  const openPreparedPost = (group: FacebookGroup, text: string) => {
+    if (!validateAffiliateLink(affiliateLink)) {
+      setAffiliateError("Cole seu link de afiliado para preparar a publicação.");
+      showToast("Preencha seu link de afiliado antes de continuar.");
+      return;
+    }
+    window.open(formatGroupUrl(group.groupUrl), "_blank", "noopener,noreferrer");
+    void handleCopyText(text, group.id);
+  };
   const handleCopyAndOpenFacebook = (group: FacebookGroup, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    const fbCopy = generateCopyForProduct(selectedProduct, copyStyle, "facebook");
-    navigator.clipboard.writeText(fbCopy);
-    setCopiedKey(group.id);
-
-    if (!joinedGroupIds.includes(group.id)) {
-      handleToggleMembership(group.id);
-    }
-
-    const targetUrl = formatGroupUrl(group.groupUrl);
-    window.open(targetUrl, "_blank", "noopener,noreferrer");
-    showToast(`📋 Publicação e link copiados! Redirecionando para o feed do grupo ${group.name}...`);
-    setTimeout(() => setCopiedKey(null), 3000);
+    e?.stopPropagation();
+    openPreparedPost(group, generateCopyForProduct(selectedProduct, copyStyle, "facebook"));
   };
-
-  // Open and Post directly to the specific group
-  const handlePostDirectly = (group: FacebookGroup) => {
-    // Copy the prepared text
-    navigator.clipboard.writeText(customCopyText);
-
-    if (!joinedGroupIds.includes(group.id)) {
-      handleToggleMembership(group.id);
-    }
-
-    const targetUrl = formatGroupUrl(group.groupUrl);
-    window.open(targetUrl, "_blank", "noopener,noreferrer");
-    showToast(`📋 Texto copiado! Redirecionando para o grupo específico ${group.name}... Cole no feed/chat!`);
-  };
-
-  // Share directly to the specific group based on platform
+  const handlePostDirectly = (group: FacebookGroup) => openPreparedPost(group, customCopyText);
   const handleDirectShareToGroup = (group: FacebookGroup, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    const copyText = generateCopyForProduct(selectedProduct, copyStyle, group.platform);
-    try {
-      if (navigator?.clipboard?.writeText) {
-        navigator.clipboard.writeText(copyText).catch(() => {});
-      }
-    } catch {}
-
-    if (!joinedGroupIds.includes(group.id)) {
-      handleToggleMembership(group.id);
-    }
-
-    const targetUrl = formatGroupUrl(group.groupUrl);
-    window.open(targetUrl, "_blank", "noopener,noreferrer");
-    showToast(`📋 Texto com link copiado! Redirecionando para o grupo específico: ${group.name}`);
+    e?.stopPropagation();
+    openPreparedPost(group, generateCopyForProduct(selectedProduct, copyStyle, group.platform));
   };
-
-  // Trigger assisted automated posting from card or modal
   const handleTriggerCardAssistedPosting = (group: FacebookGroup, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
+    e?.stopPropagation();
     setActiveGroupForPublishing(group);
     window.scrollTo({ top: 380, behavior: "smooth" });
-    handleRunAssistedPosting(group);
   };
-
-  // Run Assisted Automated Posting in Group
-  const handleRunAssistedPosting = (group: FacebookGroup) => {
-    setActiveGroupForPublishing(group);
-    setIsSendingPost(true);
-    setPostProgress(15);
-    setPostStatusText(`Conectando ao ${group.name}...`);
-    setPostSuccessData(null);
-
-    setTimeout(() => {
-      setPostProgress(45);
-      setPostStatusText(`Renderizando criativo, fotos reais e link de comissão com cupom...`);
-    }, 1000);
-
-    setTimeout(() => {
-      setPostProgress(80);
-      setPostStatusText(`Disparando publicação com sucesso para os ${group.members}...`);
-    }, 2200);
-
-    setTimeout(() => {
-      setPostProgress(100);
-      setPostStatusText(`Membros visualizando a oferta e clicando no link!`);
-
-      // Determine commission based on user code
-      const isVipUser = userCode === "123456" || userCode === "12456";
-      let commissionVal = 0;
-      let sales = 1;
-      let viewsCount = Math.floor(Math.random() * 350 + 620);
-      let clicksCount = Math.floor(Math.random() * 60 + 85);
-
-      if (isVipUser) {
-        commissionVal = Number((Math.random() * (70 - 20) + 20).toFixed(2));
-        sales = Math.floor(Math.random() * 3 + 2);
-        viewsCount = Math.floor(Math.random() * 1800 + 2400);
-        clicksCount = Math.floor(Math.random() * 240 + 350);
-      } else {
-        const remainingDaily = Math.max(0, Number((25.00 - (state.dailyAccumulated || 0)).toFixed(2)));
-        if (remainingDaily > 0) {
-          const raw = Number((Math.random() * 0.85 + 2.10).toFixed(2));
-          commissionVal = Math.min(raw, remainingDaily);
-        } else {
-          commissionVal = 0;
-        }
-      }
-
-      setPostSuccessData({
-        groupName: group.name,
-        views: viewsCount,
-        clicks: clicksCount,
-        commission: commissionVal,
-        salesCount: sales
-      });
-
-      // Add real commission to financial store!
-      if (commissionVal > 0) {
-        addCommission(
-          commissionVal, 
-          selectedProduct.name, 
-          `Publicação em Grupo: ${group.name}`, 
-          "divulgacao"
-        );
-        showToast(`🎉 Publicação concluída com sucesso! +R$ ${commissionVal.toFixed(2).replace(".", ",")} adicionados ao seu saldo!`);
-      } else if (!isVipUser) {
-        showToast(`🎉 Publicação enviada com sucesso no ${group.name}!`);
-      }
-
-      // Add to joined groups if not already
-      if (!joinedGroupIds.includes(group.id)) {
-        handleToggleMembership(group.id);
-      }
-
-      setIsSendingPost(false);
-    }, 3400);
-  };
-
-  // Mass automated broadcasting to ALL groups
-  const handleStartMassPosting = () => {
-    setIsMassPostingRunning(true);
-    setMassProgress(4);
-    setMassCompletedGroupIds([]);
-    setMassResult(null);
-
-    const groupsToProcess = allGroups;
-    let idx = 0;
-    const completed: string[] = [];
-
-    const interval = setInterval(() => {
-      if (idx < groupsToProcess.length) {
-        const grp = groupsToProcess[idx];
-        completed.push(grp.id);
-        setMassCompletedGroupIds([...completed]);
-        const progressPct = Math.round(((idx + 1) / groupsToProcess.length) * 100);
-        setMassProgress(progressPct);
-        setMassStatusText(`Publicando no ${grp.name} (${idx + 1}/${groupsToProcess.length})...`);
-        idx++;
-      } else {
-        clearInterval(interval);
-        setIsMassPostingRunning(false);
-        setMassStatusText("Disparo em massa concluído com sucesso em todos os grupos!");
-
-        const isVipUser = userCode === "123456" || userCode === "12456";
-        let totalCommission = 0;
-        if (isVipUser) {
-          totalCommission = Number((Math.random() * (70 - 35) + 35).toFixed(2));
-        } else {
-          const remainingDaily = Math.max(0, Number((25.00 - (state.dailyAccumulated || 0)).toFixed(2)));
-          totalCommission = Math.min(Number((Math.random() * 5 + 15).toFixed(2)), remainingDaily);
-        }
-
-        const totalViews = Math.floor(Math.random() * 3200 + 13800);
-        const totalClicks = Math.floor(Math.random() * 450 + 1520);
-        const totalSales = isVipUser ? Math.floor(Math.random() * 6 + 5) : Math.floor(Math.random() * 3 + 1);
-
-        setMassResult({
-          totalGroups: groupsToProcess.length,
-          totalViews,
-          totalClicks,
-          totalSales,
-          totalCommission
-        });
-
-        if (totalCommission > 0) {
-          addCommission(
-            totalCommission,
-            selectedProduct.name,
-            `Disparo em Massa: ${groupsToProcess.length} Grupos de Ofertas`,
-            "divulgacao"
-          );
-        }
-
-        showToast(`🎉 Disparo em massa concluído em todos os ${groupsToProcess.length} grupos!`);
-      }
-    }, 220);
-  };
+  const handleRunAssistedPosting = (group: FacebookGroup) => handlePostDirectly(group);
 
   // Add custom group handler
   const handleCreateCustomGroup = (e: React.FormEvent) => {
@@ -514,7 +307,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
           </h2>
 
           <p className="text-xs text-slate-300 leading-relaxed">
-            Encontre grupos para divulgação e cadastre seus próprios convites. Os links do catálogo foram conferidos em 18/10/2026; acesso e publicação dependem das regras de cada grupo.
+            Encontre grupos para divulgação e cadastre seus próprios convites. Cada cartão informa a situação da conferência. Acesso e publicação dependem das regras de cada grupo.
           </p>
         </div>
 
@@ -523,15 +316,11 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
           <button
             onClick={() => {
               setIsMassPostingOpen(true);
-              setMassResult(null);
-              setMassCompletedGroupIds([]);
-              setMassProgress(0);
-              setMassStatusText("");
             }}
             className="px-3.5 py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-md shadow-emerald-900/30 transition-all flex items-center gap-1.5 cursor-pointer ring-1 ring-emerald-400/40"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>⚡ Disparar em Todos ({allGroups.length})</span>
+            <span>Divulgar em sequência ({filteredGroups.length})</span>
           </button>
 
           <button
@@ -582,7 +371,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
 
         <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 uppercase">Última conferência</span>
+            <span className="text-xs font-medium text-slate-500 uppercase">Conferência dos links</span>
             <div className="w-7 h-7 rounded-lg bg-orange-50 text-[#EE4D2D] flex items-center justify-center">
               <Flame className="w-3.5 h-3.5" />
             </div>
@@ -590,7 +379,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
           <div className="text-xl font-bold font-mono-code text-slate-900 mt-2">
             18/10/2026
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5 font-medium">Prévia do grupo na plataforma</p>
+          <p className="text-[11px] text-slate-400 mt-0.5 font-medium">Situação informada em cada cartão</p>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs">
@@ -640,7 +429,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-orange-100 text-[#FF5722]">
-                    Publicando no Grupo
+                    Preparar publicação
                   </span>
                   <span className="text-xs font-bold text-slate-500">{activeGroupForPublishing.members}</span>
                 </div>
@@ -746,7 +535,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
                       <span>Relâmpago / Urgência</span>
                     </div>
                     <p className="text-[10px] text-slate-500 mt-1">
-                      Gatilho de escassez e frete grátis
+                      Chamada curta para a oferta
                     </p>
                   </button>
 
@@ -760,7 +549,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
                   >
                     <div className="flex items-center gap-1.5 text-xs font-black">
                       <span>💬</span>
-                      <span>Dica de Amiga / Review</span>
+                      <span>Apresentar o produto</span>
                     </div>
                     <p className="text-[10px] text-slate-500 mt-1">
                       Tom sincero e recomendação pessoal
@@ -842,49 +631,6 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
                 </button>
               </div>
 
-              {/* Active Posting Animation Feedback */}
-              {isSendingPost && (
-                <div className="p-4 rounded-2xl bg-orange-50 border border-orange-200 space-y-2 animate-in fade-in">
-                  <div className="flex items-center justify-between text-xs font-black text-orange-950">
-                    <span>Disparando no grupo com IA...</span>
-                    <span>{postProgress}%</span>
-                  </div>
-                  <div className="w-full bg-orange-200/60 h-2 rounded-full overflow-hidden">
-                    <div 
-                      className="bg-[#FF5722] h-full rounded-full transition-all duration-500" 
-                      style={{ width: `${postProgress}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-orange-800 italic">{postStatusText}</p>
-                </div>
-              )}
-
-              {/* Post Success Report */}
-              {postSuccessData && (
-                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-2 animate-in fade-in">
-                  <div className="flex items-center gap-2 text-xs font-black text-emerald-900">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>Publicação Realizada com Sucesso no {postSuccessData.groupName}!</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 pt-1">
-                    <div className="bg-white p-2.5 rounded-xl border border-emerald-100 text-center">
-                      <span className="text-[10px] text-slate-500 block">Visualizações</span>
-                      <span className="text-xs font-black text-slate-900">{postSuccessData.views}</span>
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-emerald-100 text-center">
-                      <span className="text-[10px] text-slate-500 block">Cliques no Link</span>
-                      <span className="text-xs font-black text-slate-900">{postSuccessData.clicks}</span>
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-emerald-100 text-center">
-                      <span className="text-[10px] text-emerald-600 font-bold block">Comissão Creditada</span>
-                      <span className="text-xs font-black text-emerald-600">
-                        +R$ {postSuccessData.commission.toFixed(2).replace(".", ",")}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* The 3 Main Publishing Actions */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
                 {/* Action 1: Copy Full Post */}
@@ -908,7 +654,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
                   }`}
                 >
                   <Send className="w-4 h-4" />
-                  <span>Publicar no Grupo Agora</span>
+                  <span>Copiar e abrir grupo</span>
                 </button>
 
                 {/* Action 3: Assisted Automation Posting */}
@@ -918,7 +664,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
                   className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-orange-500 to-[#FF5722] hover:opacity-95 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-orange-500/25 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <Zap className="w-4 h-4 fill-white" />
-                  <span>Disparo Automático (Bot)</span>
+                  <span>Copiar e abrir grupo</span>
                 </button>
               </div>
             </div>
@@ -927,6 +673,8 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
       )}
 
       {/* ========================================================= */}
+      <AffiliateLinkField value={affiliateLink} onChange={value => {setAffiliateLink(value);setAffiliateError("");}} error={affiliateError} />
+
       {/* FILTER CONTROLS & SEARCH BAR                              */}
       {/* ========================================================= */}
       <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-4">
@@ -1233,7 +981,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
                     </span>
                     <span>•</span>
                     <span className="text-emerald-600 font-bold">
-                      {group.lastCheckedAt ? "Prévia conferida em 18/10/2026" : "Adicionado por você"}
+                      {group.platform === "facebook" && !group.isPublic ? "Privacidade e regras a conferir" : group.lastCheckedAt ? "Prévia conferida em 18/10/2026" : "Adicionado por você"}
                     </span>
                   </div>
                 </div>
@@ -1266,10 +1014,10 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
                   disabled={isSendingPost}
                   onClick={(e) => handleTriggerCardAssistedPosting(group, e)}
                   className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-orange-500 to-[#FF5722] hover:opacity-95 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-sm shadow-orange-500/20 transition-all cursor-pointer hover:scale-[1.01] disabled:opacity-50"
-                  title="Disparar publicação automatizada com IA neste grupo"
+                  title="Preparar texto para revisar e publicar neste grupo"
                 >
                   <Zap className="w-3.5 h-3.5 fill-white" />
-                  <span>⚡ Disparo Automático (Bot IA)</span>
+                  <span>Preparar publicação</span>
                 </button>
 
                 {/* Linha Secundária: Compartilhamento Direto na Rede Social + Acesso ao Grupo */}
@@ -1594,7 +1342,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
                 <div>
                   <strong className="text-emerald-900 font-black">1. Use Sempre Links Oficiais com sua Tag</strong>
                   <p className="text-emerald-800 text-[11px] mt-0.5">
-                    Nunca use encurtadores desconhecidos (bit.ly estranhos). O Shop GO já gera links limpos oficiais da Shopee que os filtros do WhatsApp e Facebook aprovam imediatamente.
+                    Nunca use encurtadores desconhecidos (bit.ly estranhos). Use o link gerado na sua própria conta de afiliado e confira as regras antes de postar.
                   </p>
                 </div>
               </div>
@@ -1643,243 +1391,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
       {/* ========================================================= */}
       {/* MODAL: DISPARO AUTOMÁTICO EM TODOS OS GRUPOS COM IA       */}
       {/* ========================================================= */}
-      {isMassPostingOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full p-6 space-y-5 animate-in fade-in max-h-[92vh] overflow-y-auto">
-            {/* Header */}
-            <div className="flex items-start justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/30">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                      Disparo em Massa Oficial
-                    </span>
-                    <span className="text-xs font-bold text-slate-500">
-                      {allGroups.length} Grupos Ativos
-                    </span>
-                  </div>
-                  <h3 className="text-base sm:text-lg font-black text-slate-900 mt-0.5">
-                    Disparo Automático em Todos os Grupos (IA)
-                  </h3>
-                </div>
-              </div>
-
-              {!isMassPostingRunning && (
-                <button
-                  onClick={() => setIsMassPostingOpen(false)}
-                  className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              )}
-            </div>
-
-            {/* Selected Product Card */}
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <img
-                  src={selectedProduct.imageUrl}
-                  alt={selectedProduct.name}
-                  referrerPolicy="no-referrer"
-                  className="w-12 h-12 rounded-xl object-cover border border-slate-200 bg-white shrink-0"
-                />
-                <div className="min-w-0">
-                  <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
-                    {selectedProduct.category}
-                  </span>
-                  <h4 className="font-bold text-slate-900 text-xs truncate mt-0.5">
-                    {selectedProduct.name}
-                  </h4>
-                  <div className="flex items-baseline gap-2 mt-0.5">
-                    <span className="text-xs font-black text-[#FF5722]">
-                      R$ {selectedProduct.price.toFixed(2).replace(".", ",")}
-                    </span>
-                    <span className="text-[10px] font-bold text-emerald-600">
-                      +R$ {selectedProduct.commissionValue.toFixed(2).replace(".", ",")} comissão
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {!isMassPostingRunning && !massResult && (
-                <button
-                  onClick={() => setIsProductSelectorOpen(true)}
-                  className="text-xs font-bold text-[#FF5722] hover:underline shrink-0 flex items-center gap-1 cursor-pointer"
-                >
-                  <ShoppingBag className="w-3.5 h-3.5" />
-                  <span>Trocar</span>
-                </button>
-              )}
-            </div>
-
-            {/* If NOT yet running and NO results, show groups summary & start button */}
-            {!isMassPostingRunning && !massResult && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-2.5 text-center">
-                  <div className="p-3 rounded-2xl bg-blue-50 border border-blue-100">
-                    <span className="text-xs font-black text-blue-900 block">12 Grupos</span>
-                    <span className="text-[10px] text-blue-700 font-medium">Facebook Públicos</span>
-                  </div>
-                  <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-100">
-                    <span className="text-xs font-black text-emerald-900 block">6 Grupos</span>
-                    <span className="text-[10px] text-emerald-700 font-medium">WhatsApp VIP</span>
-                  </div>
-                  <div className="p-3 rounded-2xl bg-sky-50 border border-sky-100">
-                    <span className="text-xs font-black text-sky-900 block">3 Canais</span>
-                    <span className="text-[10px] text-sky-700 font-medium">Telegram Push</span>
-                  </div>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-900 text-xs flex items-start gap-2.5">
-                  <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                  <p className="leading-relaxed">
-                    O robô do Shop GO irá publicar a oferta nos <strong>{allGroups.length} grupos da sua lista</strong> com criativos automáticos, links rastreados de afiliado e preços De/Por para gerar tráfego e vendas imediatas.
-                  </p>
-                </div>
-
-                <div className="pt-2 flex items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsMassPostingOpen(false)}
-                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 cursor-pointer"
-                  >
-                    Cancelar
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleStartMassPosting}
-                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-md shadow-emerald-900/30 flex items-center gap-2 cursor-pointer transition-all hover:scale-[1.02]"
-                  >
-                    <Zap className="w-4 h-4 fill-white" />
-                    <span>Iniciar Disparo em Todos ({allGroups.length})</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* If RUNNING: Progress & Groups Checklist */}
-            {isMassPostingRunning && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-800 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                      {massStatusText || "Processando disparo em massa..."}
-                    </span>
-                    <span className="font-mono-code font-black text-emerald-600">{massProgress}%</span>
-                  </div>
-                  <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200">
-                    <div 
-                      className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-300"
-                      style={{ width: `${massProgress}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="max-h-60 overflow-y-auto space-y-1.5 p-2 bg-slate-50 rounded-2xl border border-slate-200/80">
-                  {allGroups.map((grp) => {
-                    const isDone = massCompletedGroupIds.includes(grp.id);
-                    return (
-                      <div
-                        key={grp.id}
-                        className={`p-2.5 rounded-xl border flex items-center justify-between text-xs transition-colors ${
-                          isDone 
-                            ? "bg-white border-emerald-200 text-slate-800" 
-                            : "bg-slate-50 border-slate-200/50 text-slate-400"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className={`w-2 h-2 rounded-full shrink-0 ${
-                            isDone ? "bg-emerald-500" : "bg-slate-300"
-                          }`} />
-                          <span className="font-bold truncate">{grp.name}</span>
-                        </div>
-                        {isDone ? (
-                          <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 flex items-center gap-1 shrink-0">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                            Publicado
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-slate-400 italic shrink-0">
-                            Na fila...
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* If COMPLETED: Full Result Summary */}
-            {massResult && !isMassPostingRunning && (
-              <div className="space-y-5 animate-in fade-in">
-                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-black text-emerald-950 text-sm">
-                      Disparo em Massa Concluído com Sucesso!
-                    </h4>
-                    <p className="text-emerald-800 text-xs mt-0.5">
-                      Todos os {massResult.totalGroups} grupos receberam a publicação do <strong>{selectedProduct.name}</strong> com seu link de afiliado rastreado.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-center">
-                    <span className="text-[10px] text-slate-500 uppercase font-bold block">Grupos</span>
-                    <span className="text-lg font-black font-mono-code text-slate-900">{massResult.totalGroups}</span>
-                    <span className="text-[10px] text-emerald-600 font-bold block mt-0.5">100% Enviados</span>
-                  </div>
-
-                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-center">
-                    <span className="text-[10px] text-slate-500 uppercase font-bold block">Visualizações</span>
-                    <span className="text-lg font-black font-mono-code text-slate-900">+{massResult.totalViews.toLocaleString("pt-BR")}</span>
-                    <span className="text-[10px] text-blue-600 font-bold block mt-0.5">Alcance Real</span>
-                  </div>
-
-                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-center">
-                    <span className="text-[10px] text-slate-500 uppercase font-bold block">Cliques no Link</span>
-                    <span className="text-lg font-black font-mono-code text-slate-900">+{massResult.totalClicks.toLocaleString("pt-BR")}</span>
-                    <span className="text-[10px] text-orange-600 font-bold block mt-0.5">Compradores</span>
-                  </div>
-
-                  <div className="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200 text-center">
-                    <span className="text-[10px] text-emerald-800 uppercase font-bold block">Comissão</span>
-                    <span className="text-lg font-black font-mono-code text-emerald-600">
-                      +R$ {massResult.totalCommission.toFixed(2).replace(".", ",")}
-                    </span>
-                    <span className="text-[10px] text-emerald-700 font-bold block mt-0.5">Creditada</span>
-                  </div>
-                </div>
-
-                {massResult.totalCommission <= 0 && !(userCode === "123456" || userCode === "12456") && (
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs">
-                    ℹ️ Publicações ativas gerando cliques e tráfego orgânico nos grupos de ofertas!
-                  </div>
-                )}
-
-                <div className="pt-2 flex items-center justify-end gap-3">
-                  <button
-                    onClick={() => {
-                      setIsMassPostingOpen(false);
-                      setMassResult(null);
-                    }}
-                    className="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs cursor-pointer shadow-xs"
-                  >
-                    Concluir e Voltar aos Grupos
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {isMassPostingOpen && <GroupPublishingQueue key={selectedProduct.id} groups={filteredGroups} text={customCopyText} ready={!!validateAffiliateLink(affiliateLink)} onClose={() => setIsMassPostingOpen(false)} />}
     </div>
   );
 };

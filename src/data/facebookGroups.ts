@@ -24,6 +24,38 @@ export type OfferGroup = FacebookGroup;
 
 // Previews checked on the platform; this does not guarantee admission or permission to post.
 export const OFFER_GROUPS: FacebookGroup[] = [
+{
+  "id": "fb-shopee-compras",
+  "name": "Shopee Brasil compras",
+  "platform": "facebook",
+  "members": "Consulte no Facebook",
+  "dailyPosts": "Não aferido",
+  "description": "Nome e endereço confirmados na página do Facebook. Privacidade e permissão de divulgação não ficaram visíveis sem login.",
+  "rules": "Abra a seção Sobre e confira se é público e permite links de afiliado. Pode haver aprovação de participação e posts.",
+  "groupUrl": "https://www.facebook.com/groups/731750790665688/",
+  "badge": "Regras e privacidade pendentes",
+  "recommendedTime": "Conforme as regras do grupo",
+  "category": "Geral",
+  "isVerified": false,
+  "sourceUrl": "https://t.me/s/shopeeflixofc?before=785",
+  "lastCheckedAt": "2026-10-18"
+},
+{
+  "id": "fb-cupons-app",
+  "name": "Comunidade para cupons e ofertas App!",
+  "platform": "facebook",
+  "members": "Consulte no Facebook",
+  "dailyPosts": "Não aferido",
+  "description": "Nome e endereço confirmados na página do Facebook. Privacidade e permissão de divulgação não ficaram visíveis sem login.",
+  "rules": "Abra a seção Sobre e confira se é público e permite links de afiliado. Pode haver aprovação de participação e posts.",
+  "groupUrl": "https://www.facebook.com/groups/shopeealiexpress/",
+  "badge": "Regras e privacidade pendentes",
+  "recommendedTime": "Conforme as regras do grupo",
+  "category": "Geral",
+  "isVerified": false,
+  "sourceUrl": "https://linktr.ee/gruposshopee",
+  "lastCheckedAt": "2026-10-18"
+},
   {
     "id": "tg-shopee-divulgacao",
     "name": "Divulgação Shopee",
