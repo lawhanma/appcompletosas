@@ -17,9 +17,11 @@ const blocked = renderToStaticMarkup(React.createElement(GroupPublishingQueue, {
 assert.ok(!blocked.includes('2. Abrir grupo'));
 assert.ok(blocked.includes('informe seu link de afiliado'));
 const page = renderToStaticMarkup(React.createElement(GruposOfertasView));
-assert.ok(page.includes('Shopee Brasil compras'));
-assert.ok(page.includes('Regras e privacidade pendentes'));
+assert.ok(page.includes('Afiliado Shopee Iniciante / Divulgue seu Link'));
+assert.ok(page.includes('21 Grupos Mapeados'));
 assert.ok(page.includes('Seu link de afiliado'));
 assert.ok(!page.includes('Disparo Automático'));
-for (const group of OFFER_GROUPS.filter(g => g.platform === 'facebook')) assert.equal(group.isPublic, undefined);
+const facebook = OFFER_GROUPS.filter(g => g.platform === 'facebook');
+assert.equal(facebook.length, 21);
+for (const group of facebook) {assert.equal(group.isPublic, true);assert.equal(group.lastCheckedAt, '2026-10-19');}
 console.log('Group publishing render checks passed');

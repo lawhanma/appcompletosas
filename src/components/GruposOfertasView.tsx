@@ -61,7 +61,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
   const [productSearchQuery, setProductSearchQuery] = useState("");
 
   // Filter states - Default to "todos" so all groups (WhatsApp, Facebook, Telegram) are immediately visible and working
-  const [platformFilter, setPlatformFilter] = useState<"todos" | "whatsapp" | "facebook" | "telegram">("todos");
+  const [platformFilter, setPlatformFilter] = useState<"todos" | "whatsapp" | "facebook" | "telegram">("facebook");
   const [privacyFilter, setPrivacyFilter] = useState<"todos" | "publicos">("todos");
   const [categoryFilter, setCategoryFilter] = useState<string>("Todos");
   const [membershipFilter, setMembershipFilter] = useState<"todos" | "membro" | "novos">("todos");
@@ -377,7 +377,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
             </div>
           </div>
           <div className="text-xl font-bold font-mono-code text-slate-900 mt-2">
-            18/10/2026
+            19/10/2026
           </div>
           <p className="text-[11px] text-slate-400 mt-0.5 font-medium">Situação informada em cada cartão</p>
         </div>
@@ -841,7 +841,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
                   Grupos Públicos de Ofertas & Achadinhos no Facebook
                 </h3>
                 <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
-                  Use as buscas abaixo para encontrar comunidades. O Facebook pode exigir login; entrada e publicação dependem dos administradores. Somente adicione o link direto depois de conferir o grupo.
+                  Use as buscas abaixo para encontrar comunidades. O Facebook pode exigir login; entrada e publicação dependem dos administradores. Os grupos do catálogo marcados como públicos foram conferidos na busca autenticada do Facebook em 19/10/2026.
                 </p>
               </div>
             </div>
@@ -981,7 +981,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
                     </span>
                     <span>•</span>
                     <span className="text-emerald-600 font-bold">
-                      {group.platform === "facebook" && !group.isPublic ? "Privacidade e regras a conferir" : group.lastCheckedAt ? "Prévia conferida em 18/10/2026" : "Adicionado por você"}
+                      {group.platform === "facebook" && !group.isPublic ? "Privacidade e regras a conferir" : group.lastCheckedAt ? `Conferido em ${group.lastCheckedAt.split("-").reverse().join("/")}` : "Adicionado por você"}
                     </span>
                   </div>
                 </div>
