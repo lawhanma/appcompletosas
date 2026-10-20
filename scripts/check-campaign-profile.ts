@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {resolveCampaignProfile} from '../src/utils/campaignProfile';
+import {AffiliateProfile} from '../src/utils/affiliateProfiles';
+const p:AffiliateProfile={id:'one',user_id:'owner',name:'Apex',platform:'instagram',handle:'@apex',url:'',color:'orange',archived:false,created_at:''};
+assert.throws(()=>resolveCampaignProfile([p],'',false,''));
+assert.throws(()=>resolveCampaignProfile([p],'another',false,''));
+assert.throws(()=>resolveCampaignProfile([{...p,archived:true}],'one',false,''));
+assert.throws(()=>resolveCampaignProfile([p],'one',true,''));
+assert.throws(()=>resolveCampaignProfile([p],'one',false,'Falha na conexão'));
+const selected=resolveCampaignProfile([p],'one',false,'');
+assert.equal(selected.label,'Apex · Instagram · @apex');
+p.name='Alterado';assert.equal(selected.name,'Apex');
+console.log('Campaign profile selection, invalid states and snapshot passed');

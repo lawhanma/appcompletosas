@@ -1,3 +1,5 @@
+import {CampaignProfileField} from './CampaignProfileField';
+import {useCampaignProfile,CampaignProfile} from '../hooks/useCampaignProfile';
 import React, { useState, useEffect } from "react";
 import { Product } from "../types";
 import { useFinancial } from "../context/FinancialContext";
@@ -65,6 +67,8 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
 }) => {
   const { addCommission, userCode, state, consumeAiCredit } = useFinancial();
   const [renewalOpen, setRenewalOpen] = useState(false);
+  const profilePicker=useCampaignProfile();
+  const [campaignProfile,setCampaignProfile]=useState<CampaignProfile|null>(null);
   const {record} = useDailyMissions();
   const [affiliateLink,setAffiliateLink] = useState('');
   const [campaignLink,setCampaignLink] = useState('');
@@ -189,10 +193,13 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
 
   // Start automated distribution process
   const startDistribution = () => {
+    if(phase!=="idle"&&phase!=="results")return;
+    const chosenProfile=profilePicker.requireProfile();
+    if(!chosenProfile)return;
     if (state.aiCredits <= 0) {setRenewalOpen(true);return;}
     const validLink = validateAffiliateLink(affiliateLink);
     if (!validLink) {setLinkError('Cole um link de afiliado válido, começando com https:// ou http://.');return;}
-    setLinkError('');setCampaignLink(validLink);
+    setLinkError('');setCampaignLink(validLink);setCampaignProfile(chosenProfile);
     setPhase("loading");
     setLoadingStepIndex(0);
     setRecentSalesNotification(null);
@@ -335,6 +342,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
   // Copy full sales campaign report
   const handleCopyReport = () => {
     const reportText = `🚀 RELATÓRIO DE DIVULGAÇÃO AUTOMÁTICA COM IA\n` +
+      `👤 Perfil: ${campaignProfile?.label||''}\n` +
       `📦 Produto: ${product.name}\n` +
       `🔗 Link de afiliado: ${campaignLink}\n` +
       `💰 Preço: R$ ${product.price.toFixed(2).replace(".", ",")}\n` +
@@ -399,6 +407,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
 
         {/* Modal Body */}
         <div className="p-5 sm:p-6 overflow-y-auto space-y-6">
+          {campaignProfile&&phase!=="idle"&&<p className="text-sm font-medium text-slate-700">Perfil da campanha: {campaignProfile.label}</p>}
           {/* Selected Product Summary Card */}
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3.5">
@@ -484,6 +493,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
                 </p>
               </div>
 
+              <CampaignProfileField {...profilePicker.fieldProps}/>
               <AffiliateLinkField value={affiliateLink} onChange={value=>{setAffiliateLink(value);setLinkError('');}} error={linkError}/>
 
               {/* Grid of 6 Platforms badges */}

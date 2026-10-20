@@ -1,3 +1,5 @@
+import {CampaignProfileField} from './CampaignProfileField';
+import {useCampaignProfile,CampaignProfile} from '../hooks/useCampaignProfile';
 import React, { useState, useEffect, useRef } from "react";
 import { Product } from "../types";
 import { PRODUCTS } from "../data/mockData";
@@ -35,6 +37,8 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
 }) => {
   const { state, userCode, isVip, addCommission, consumeAiCredit } = useFinancial();
   const [renewalOpen, setRenewalOpen] = useState(false);
+  const profilePicker=useCampaignProfile();
+  const [campaignProfile,setCampaignProfile]=useState<CampaignProfile|null>(null);
   const dailyCredits = isVip ? 5 : 4;
   const {record} = useDailyMissions();
 
@@ -84,6 +88,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
     views: number;
     affiliateLink: string;
     copyText: string;
+    profile: CampaignProfile;
   } | null>(null);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -122,10 +127,14 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
 
   // Run Automated Posting Simulation (~30s realistic sequential process)
   const handleStartAutoPosting = () => {
+    if(isPosting)return;
+    const chosenProfile=profilePicker.requireProfile();
+    if(!chosenProfile)return;
     if (state.aiCredits <= 0) {setRenewalOpen(true);return;}
     const campaignLink = validateAffiliateLink(affiliateLink);
     if (!campaignLink) {setLinkError('Cole um link de afiliado válido, começando com https:// ou http://.');return;}
     setLinkError('');
+    setCampaignProfile(chosenProfile);
 
     clearAllTimers();
     setIsPosting(true);
@@ -264,6 +273,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
       }
 
       setCampaignResult({
+        profile: chosenProfile,
         affiliateLink: campaignLink,
         copyText: `${selectedProduct.name} por R$ ${selectedProduct.price.toFixed(2).replace(".", ",")}\nConfira a oferta: ${campaignLink}`,
         salesCount: sales,
@@ -411,6 +421,8 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
                 </div>
               </div>
 
+              <CampaignProfileField {...profilePicker.fieldProps} disabled={isPosting}/>
+              {campaignProfile&&(isPosting||campaignResult)&&<p className="text-xs font-medium text-slate-700">Perfil da campanha: {campaignProfile.label}</p>}
               <AffiliateLinkField value={affiliateLink} onChange={value=>{setAffiliateLink(value);setLinkError('');}} error={linkError} disabled={isPosting}/>
 
               <p className="text-xs text-slate-500 italic px-0.5 leading-relaxed">

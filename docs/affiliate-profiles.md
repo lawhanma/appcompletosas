@@ -15,4 +15,7 @@ Customers can upload JPEG, PNG or WebP files up to 5 MB. Client decoding checks 
 Private bucket `affiliate-profile-media` is owner-folder restricted, including signed URL reads. File paths are also owner-constrained in the profile table. Signed URLs last one hour and refresh while the profile area is visible. Fresh sessions reload new URLs. Failed profile writes clean up newly uploaded objects; old replaced objects remain private for future retention cleanup.
 
 Additional remote migration: `affiliate_profile_private_images`; schema in `supabase/affiliate_profile_media.sql`. No secret key is exposed and no bucket is made public.
-`nQuantidades históricas podem ser registradas administrativamente como manual_count, com quantity e valores zerados. São identificadas como informadas manualmente. Registros comuns continuam com quantity=1 e gross>0; novas vendas aumentam a contagem. Aplicar affiliate_profile_sale_counts.sql após o schema inicial.
+
+Quantidades históricas podem ser registradas administrativamente como manual_count, com quantity e valores zerados. São identificadas como informadas manualmente. Registros comuns continuam com quantity=1 e gross>0; novas vendas aumentam a contagem. Aplicar affiliate_profile_sale_counts.sql após o schema inicial.
+
+Divulgação automática: os dois pontos de início exigem seleção explícita de perfil ativo da conta. A identificação é congelada no início e exibida durante a campanha e no resultado/relatório; a seleção fica somente no estado desta sessão. Não conecta a rede social nem importa vendas ou altera métricas do perfil. Erros de carregamento impedem iniciar, com opção de atualizar.
