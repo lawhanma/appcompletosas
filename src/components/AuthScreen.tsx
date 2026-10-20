@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ShopNextLogo } from "./ShopNextLogo";
 import { internalDb, ALLOWED_CODES } from "../utils/internalDb";
 import { supabase } from "../lib/supabase";
+import { authErrorMessage } from "../utils/authError";
 import { 
   Key, 
   Lock, 
@@ -58,36 +59,36 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [notice, setNotice] = useState("");
+  const [alreadyRegistered, setAlreadyRegistered] = useState(false);
+  const submittingRef = useRef(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     setErrorMessage("");
     setNotice("");
+    setAlreadyRegistered(false);
     if (supabase) {
       if (isRegisterMode && !purchaseCode.trim()) {
         setErrorMessage('Digite o código de compra para criar sua conta.');
         return;
       }
       setIsLoading(true);
+      submittingRef.current = true;
       try {
         const result = isRegisterMode
           ? await supabase.auth.signUp({email:email.trim(), password,
               options:{data:{full_name:name.trim(),phone:phone.trim(),purchase_code:purchaseCode.trim()},emailRedirectTo:window.location.origin}})
           : await supabase.auth.signInWithPassword({email:email.trim(),password});
         if (result.error) {
-          const code = result.error.code;
-          setErrorMessage(code === 'email_not_confirmed' ? 'Confirme seu e-mail antes de entrar.'
-            : code === 'weak_password' ? 'Escolha uma senha mais forte, com pelo menos 8 caracteres.'
-            : code === 'over_email_send_rate_limit' ? 'Muitas solicitações. Aguarde alguns minutos antes de tentar novamente.'
-            : isRegisterMode && code === 'unexpected_failure' ? 'Cadastro não autorizado. Confira seu código de compra e tente novamente.'
-            : isRegisterMode ? 'Não foi possível criar a conta. Verifique os dados ou tente entrar com seu e-mail.'
-            : 'E-mail ou senha inválidos. Confira os dados e tente novamente.');
+          setErrorMessage(authErrorMessage(result.error, isRegisterMode));
+          setAlreadyRegistered(isRegisterMode && ['user_already_exists', 'email_exists'].includes(result.error.code || ''));
           return;
         }
         setPassword('');
         if (isRegisterMode && !result.data.session) setNotice('Confira seu e-mail e clique no link de confirmação. Depois, volte aqui para entrar.');
       } catch {setErrorMessage('Não foi possível conectar. Confira sua internet e tente novamente.');}
-      finally {setIsLoading(false);}
+      finally {submittingRef.current = false;setIsLoading(false);}
       return;
     }
 
@@ -191,11 +192,15 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
         <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs p-6 space-y-4">
           {notice && <p role="status" className="p-3 bg-emerald-50 text-emerald-800 rounded-lg text-xs">{notice}</p>}
           {errorMessage && (
-            <div className="p-3 bg-rose-50 border border-rose-200/80 rounded-lg text-xs text-rose-700 flex items-start gap-2.5">
+            <div role="alert" className="p-3 bg-rose-50 border border-rose-200/80 rounded-lg text-xs text-rose-700 flex items-start gap-2.5">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
               <span className="leading-snug">{errorMessage}</span>
             </div>
           )}
+          {isRegisterMode && alreadyRegistered && <button type="button" onClick={() => {
+            setIsRegisterMode(false); setPassword(''); setErrorMessage(''); setAlreadyRegistered(false);
+            setNotice('Seu e-mail foi mantido. Digite a senha criada no primeiro cadastro para entrar.');
+          }} className="w-full rounded-lg bg-orange-50 border border-orange-200 p-3 text-sm font-semibold text-orange-700">Já tenho conta — entrar</button>}
 
           <form onSubmit={handleSubmit} className="space-y-3.5">
             {isRegisterMode && (
