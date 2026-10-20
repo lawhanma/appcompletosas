@@ -3,7 +3,7 @@ export type Platform = typeof PLATFORMS[number];
 export const PLATFORM_NAMES: Record<Platform,string> = {instagram:'Instagram',tiktok:'TikTok',facebook:'Facebook',whatsapp:'WhatsApp',telegram:'Telegram',kwai:'Kwai',youtube:'YouTube'};
 export const COLORS = ['orange','slate','rose','blue','green','violet'] as const;
 export type ProfileColor = typeof COLORS[number];
-export interface AffiliateProfile {id:string;user_id:string;name:string;platform:Platform;handle:string;url:string;color:ProfileColor;archived:boolean;created_at:string}
+export interface AffiliateProfile {avatar_path?:string;banner_path?:string;avatar_url?:string;banner_url?:string;id:string;user_id:string;name:string;platform:Platform;handle:string;url:string;color:ProfileColor;archived:boolean;created_at:string}
 export type ProfileInput = Pick<AffiliateProfile,'name'|'platform'|'handle'|'url'|'color'|'archived'>;
 export interface ProfileSale {id:string;user_id:string;profile_id:string;product:string;sold_on:string;gross:number;commission:number;order_ref:string;voided:boolean;source:'manual';created_at:string}
 export type SaleInput = Pick<ProfileSale,'profile_id'|'product'|'sold_on'|'gross'|'commission'|'order_ref'>;
