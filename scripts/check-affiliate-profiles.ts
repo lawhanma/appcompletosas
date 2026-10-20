@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {brDay,periodStart,profileMetrics,parseMoney,validateProfile,validateSale,ProfileSale} from '../src/utils/affiliateProfiles';
+const base={user_id:'a',product:'Item',sold_on:'2026-10-20',order_ref:'',voided:false,source:'manual' as const,created_at:''};
+const rows:ProfileSale[]=[{...base,id:'1',profile_id:'one',gross:0.10,commission:0.01},{...base,id:'2',profile_id:'one',gross:0.20,commission:0.02},{...base,id:'3',profile_id:'two',gross:100,commission:10},{...base,id:'4',profile_id:'one',gross:99,commission:1,voided:true},{...base,id:'5',profile_id:'one',sold_on:'2026-09-30',gross:5,commission:1}];
+assert.equal(profileMetrics(rows,'one','2026-10-01','2026-10-20').gross,0.30);
+assert.equal(profileMetrics(rows,'one','2026-10-01','2026-10-20').commission,0.03);
+assert.equal(profileMetrics(rows,'one','2026-10-01','2026-10-20').count,2);
+assert.equal(profileMetrics(rows,'two','2026-10-01','2026-10-20').gross,100);
+assert.equal(profileMetrics([]).count,0);
+assert.equal(periodStart('30','2026-03-01'),'2026-01-31');
+assert.equal(brDay(new Date('2026-10-20T01:00:00Z')),'2026-10-19');
+assert.equal(parseMoney('123,45'),123.45);assert.equal(parseMoney('1.234,56'),null);assert.equal(parseMoney('-1'),null);assert.equal(parseMoney('2.999'),null);
+assert.equal(validateProfile({name:' Ana ',platform:'instagram',handle:'@ana',url:'https://instagram.com/ana',color:'orange',archived:false}).handle,'ana');
+assert.throws(()=>validateProfile({name:'Ana',platform:'instagram',handle:'ana',url:'javascript:alert(1)',color:'orange',archived:false}));
+assert.throws(()=>validateSale({profile_id:'one',product:'Item',sold_on:'2026-02-30',gross:100,commission:1,order_ref:''}));
+assert.throws(()=>validateSale({profile_id:'one',product:'Item',sold_on:'2026-01-01',gross:100,commission:101,order_ref:''}));
+console.log('Affiliate profile metrics, dates, money and validation passed');

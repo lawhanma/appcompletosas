@@ -3,6 +3,7 @@ import { NavTab, Product } from "./types";
 import { FinancialProvider, useFinancial } from "./context/FinancialContext";
 import {DailyMissionsProvider} from './context/DailyMissions';
 import {DailyMissionsView} from './components/DailyMissionsView';
+import {MeusPerfisView} from "./components/MeusPerfisView";
 import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
 import { CatalogoView } from "./components/CatalogoView";
@@ -164,6 +165,7 @@ function AppContent() {
         {/* Dynamic View Scrollable Container */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto pb-16">
+            {activeTab === "perfis" && <MeusPerfisView />}
             {activeTab === 'missoes' && <DailyMissionsView onNavigate={(tab,sub)=>handleNavigateTab(tab,undefined,sub)} />}
             {activeTab === "catalogo" && (
               <CatalogoView onNavigateTab={handleNavigateTab} />
