@@ -5,7 +5,7 @@ export const COLORS = ['orange','slate','rose','blue','green','violet'] as const
 export type ProfileColor = typeof COLORS[number];
 export interface AffiliateProfile {avatar_path?:string;banner_path?:string;avatar_url?:string;banner_url?:string;id:string;user_id:string;name:string;platform:Platform;handle:string;url:string;color:ProfileColor;archived:boolean;created_at:string}
 export type ProfileInput = Pick<AffiliateProfile,'name'|'platform'|'handle'|'url'|'color'|'archived'>;
-export interface ProfileSale {id:string;user_id:string;profile_id:string;product:string;sold_on:string;gross:number;commission:number;order_ref:string;voided:boolean;source:'manual';created_at:string}
+export interface ProfileSale {id:string;user_id:string;profile_id:string;product:string;sold_on:string;gross:number;commission:number;order_ref:string;voided:boolean;source:'manual'|'manual_count';quantity?:number;created_at:string}
 export type SaleInput = Pick<ProfileSale,'profile_id'|'product'|'sold_on'|'gross'|'commission'|'order_ref'>;
 export function brDay(now = new Date()) {return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}
 export function periodStart(period:'month'|'30'|'all', today=brDay()) {
@@ -17,7 +17,8 @@ export function profileMetrics(sales:ProfileSale[], profileId?:string, start='',
   const rows=sales.filter(s=>!s.voided && (!profileId||s.profile_id===profileId) && s.sold_on>=start && s.sold_on<=end);
   const gross=rows.reduce((n,s)=>n+Math.round(Number(s.gross)*100),0)/100;
   const commission=rows.reduce((n,s)=>n+Math.round(Number(s.commission)*100),0)/100;
-  return {gross,commission,count:rows.length,ticket:rows.length?gross/rows.length:0,rows};
+  const count=rows.reduce((n,s)=>n+(s.quantity??1),0);
+  return {gross,commission,count,ticket:count?gross/count:0,rows};
 }
 export function parseMoney(value:string):number|null {
   const v=value.trim(); if(!/^\d+(?:[.,]\d{1,2})?$/.test(v)) return null;

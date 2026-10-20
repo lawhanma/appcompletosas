@@ -15,3 +15,8 @@ assert.throws(()=>validateProfile({name:'Ana',platform:'instagram',handle:'ana',
 assert.throws(()=>validateSale({profile_id:'one',product:'Item',sold_on:'2026-02-30',gross:100,commission:1,order_ref:''}));
 assert.throws(()=>validateSale({profile_id:'one',product:'Item',sold_on:'2026-01-01',gross:100,commission:101,order_ref:''}));
 console.log('Affiliate profile metrics, dates, money and validation passed');
+
+const counts:ProfileSale[]=[{...rows[0],source:'manual_count',quantity:357,gross:0,commission:0},...rows.slice(0,2)];
+assert.equal(profileMetrics(counts, 'one','','2026-10-20').count,359);
+assert.equal(profileMetrics(counts, 'one','','2026-10-20').gross,0.30);
+assert.equal(profileMetrics(counts.map(s=>({...s,voided:true}))).count,0);
