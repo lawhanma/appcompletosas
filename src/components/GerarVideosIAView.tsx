@@ -1,3 +1,4 @@
+import {AdDescriptionGenerator} from './AdDescriptionGenerator';
 import React, { useState, useEffect, useRef } from "react";
 import { apiFetch } from "../lib/apiFetch";
 import { Product, GeneratedVideoData, VideoScene, InfluencerConfig, RecordingFormatOption, RecordingFormatId } from "../types";
@@ -516,6 +517,8 @@ Legenda Sugerida: ${videoData.caption || "Link direto com desconto nos comentár
               })}
             </div>
           </div>
+
+          <AdDescriptionGenerator key={selectedProduct.id} product={selectedProduct}/>
 
           {/* Card 2: Formato de Gravação (Estilo da Câmera) */}
           <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs space-y-4">
