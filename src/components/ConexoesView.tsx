@@ -1,3 +1,5 @@
+import {useCloudAccount} from '../context/CloudAccount';
+import {useChannelConnections,ChannelType,ConnectionsStore} from '../hooks/useChannelConnections';
 import React, { useState } from "react";
 import { 
   ShoppingBag, 
@@ -18,7 +20,7 @@ interface ConexoesViewProps {
   onNavigateTab?: (tab: NavTab, product?: Product, subTab?: "automatica" | "grupos" | "tiktok") => void;
 }
 
-type ChannelType = "shopee" | "tiktok" | "mercadolivre";
+
 
 interface ChannelConfig {
   id: ChannelType;
@@ -40,10 +42,10 @@ const CHANNELS: Record<ChannelType, ChannelConfig> = {
     tabLabel: "SHOPEE",
     icon: <ShoppingBag className="w-3.5 h-3.5" />,
     activeColor: "#EE4D2D",
-    warningText: "Sua conta do Shop GO não possui uma loja Shopee integrada no momento. Configure abaixo para ativar todas as ferramentas de IA.",
-    buttonLabel: "CONECTAR CONTA SHOPEE",
+    warningText: "Salve os dados da sua conta Shopee para encontrá-los sempre que voltar.",
+    buttonLabel: "SALVAR CONTA SHOPEE",
     platformName: "Shopee Open Platform",
-    securityText: "Sua conexão é estabelecida de forma segura através de encriptação ponta a ponta homologada pela Shopee Open Platform.",
+    securityText: "Nome e e-mail ficam salvos na sua conta ShopGO. Esse cadastro não autoriza acesso à plataforma nem sincroniza vendas automaticamente.",
     defaultName: "Minha Loja Shopee"
   },
   tiktok: {
@@ -52,10 +54,10 @@ const CHANNELS: Record<ChannelType, ChannelConfig> = {
     tabLabel: "TIKTOK SHOP",
     icon: <Music2 className="w-3.5 h-3.5" />,
     activeColor: "#000000",
-    warningText: "Sua conta do Shop GO não possui uma conta TikTok Shop integrada no momento. Configure abaixo para ativar todas as ferramentas de IA.",
-    buttonLabel: "CONECTAR CONTA TIKTOK SHOP",
+    warningText: "Salve os dados da sua conta TikTok Shop para encontrá-los sempre que voltar.",
+    buttonLabel: "SALVAR CONTA TIKTOK SHOP",
     platformName: "TikTok Shop Partner Platform",
-    securityText: "Sua conexão é estabelecida de forma segura através de encriptação ponta a ponta homologada pela TikTok Shop Partner Platform.",
+    securityText: "Nome e e-mail ficam salvos na sua conta ShopGO. Esse cadastro não autoriza acesso à plataforma nem sincroniza vendas automaticamente.",
     defaultName: "Meu Canal TikTok Shop"
   },
   mercadolivre: {
@@ -64,25 +66,25 @@ const CHANNELS: Record<ChannelType, ChannelConfig> = {
     tabLabel: "MERCADO LIVRE",
     icon: <Store className="w-3.5 h-3.5" />,
     activeColor: "#D97706",
-    warningText: "Sua conta do Shop GO não possui uma conta Mercado Livre integrada no momento. Configure abaixo para ativar todas as ferramentas de IA.",
-    buttonLabel: "CONECTAR CONTA MERCADO LIVRE",
+    warningText: "Salve os dados da sua conta Mercado Livre para encontrá-los sempre que voltar.",
+    buttonLabel: "SALVAR CONTA MERCADO LIVRE",
     platformName: "Mercado Livre Developers",
-    securityText: "Sua conexão é estabelecida de forma segura através de encriptação ponta a ponta homologada pelo Mercado Livre Developers.",
+    securityText: "Nome e e-mail ficam salvos na sua conta ShopGO. Esse cadastro não autoriza acesso à plataforma nem sincroniza vendas automaticamente.",
     defaultName: "Minha Conta Mercado Livre"
   }
 };
 
 export const ConexoesView: React.FC<ConexoesViewProps> = () => {
-  const { userEmail } = useFinancial();
+  const {userEmail}=useFinancial();
+  const store=useChannelConnections();
+  const owner=useCloudAccount()?.profile.id||'';
+  return <ConnectionsWorkspace key={owner} store={store} userEmail={userEmail||''}/>;
+};
+export const ConnectionsWorkspace:React.FC<{store:ConnectionsStore;userEmail:string}>=({store,userEmail})=>{
   const [activeChannel, setActiveChannel] = useState<ChannelType>("shopee");
 
-  // State of connections per channel
-  const [connectedState, setConnectedState] = useState<Record<ChannelType, { isConnected: boolean; name: string; email: string }>>({
-    shopee: { isConnected: false, name: "", email: "" },
-    tiktok: { isConnected: false, name: "", email: "" },
-    mercadolivre: { isConnected: false, name: "", email: "" }
-  });
-
+  const connectedState=store.connections;
+  const [actionError,setActionError]=useState('');
   // Form input states
   const [formData, setFormData] = useState<Record<ChannelType, { name: string; email: string }>>({
     shopee: { name: "", email: userEmail || "" },
@@ -106,39 +108,20 @@ export const ConexoesView: React.FC<ConexoesViewProps> = () => {
     }));
   };
 
-  const handleConnect = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    const nameToSave = formData[activeChannel].name.trim() || currentChannel.defaultName;
-    const emailToSave = formData[activeChannel].email.trim() || userEmail || "afiliado@shopgo.com.br";
-
-    setTimeout(() => {
-      setConnectedState(prev => ({
-        ...prev,
-        [activeChannel]: {
-          isConnected: true,
-          name: nameToSave,
-          email: emailToSave
-        }
-      }));
-      setIsLoading(false);
-      setSuccessToast(`Conta ${currentChannel.name} conectada com sucesso à Shop GO!`);
-      setTimeout(() => setSuccessToast(null), 4000);
-    }, 900);
+  const handleConnect = async (e:React.FormEvent) => {
+    e.preventDefault();if(isLoading||store.loading||store.error)return;
+    const channel=activeChannel,config=CHANNELS[channel];
+    setIsLoading(true);setActionError('');setSuccessToast(null);
+    try{await store.save(channel,formData[channel].name,formData[channel].email);setSuccessToast(`Dados da conta ${config.name} salvos com sucesso!`);}
+    catch(e){setActionError(e instanceof Error?e.message:'Não foi possível salvar.');}
+    finally{setIsLoading(false);}
   };
-
-  const handleDisconnect = () => {
-    setConnectedState(prev => ({
-      ...prev,
-      [activeChannel]: {
-        isConnected: false,
-        name: "",
-        email: ""
-      }
-    }));
-    setSuccessToast(`Conexão com ${currentChannel.name} desvinculada.`);
-    setTimeout(() => setSuccessToast(null), 3000);
+  const handleDisconnect=async()=>{
+    if(isLoading||store.loading||store.error)return;
+    const channel=activeChannel;setIsLoading(true);setActionError('');setSuccessToast(null);
+    try{await store.disconnect(channel);setSuccessToast(`Configuração de ${CHANNELS[channel].name} desvinculada.`);}
+    catch(e){setActionError(e instanceof Error?e.message:'Não foi possível desconectar.');}
+    finally{setIsLoading(false);}
   };
 
   return (
@@ -149,7 +132,7 @@ export const ConexoesView: React.FC<ConexoesViewProps> = () => {
           Conexões e integrações
         </h1>
         <p className="text-xs text-slate-500 mt-1">
-          Conecte seus canais de venda para automação, posts com IA e sincronização em tempo real.
+          Salve os dados dos seus canais e encontre suas configurações ao entrar novamente.
         </p>
 
         {/* Channel Selection Tabs */}
@@ -161,7 +144,8 @@ export const ConexoesView: React.FC<ConexoesViewProps> = () => {
             return (
               <button
                 key={channelKey}
-                onClick={() => setActiveChannel(channelKey)}
+                disabled={isLoading||store.loading}
+                onClick={() => {setActiveChannel(channelKey);setSuccessToast(null);setActionError('');}}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                   isActive
                     ? "bg-white text-slate-900 font-semibold shadow-xs"
@@ -174,7 +158,7 @@ export const ConexoesView: React.FC<ConexoesViewProps> = () => {
                 <span className="tracking-wide">{channel.tabLabel}</span>
 
                 {connectedState[channelKey].isConnected && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 ml-0.5" title="Conectado" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 ml-0.5" title="Configuração salva" />
                 )}
               </button>
             );
@@ -192,6 +176,7 @@ export const ConexoesView: React.FC<ConexoesViewProps> = () => {
         </div>
       )}
 
+      {actionError&&<p role="alert" className="p-3 rounded-lg border border-rose-200 bg-rose-50 text-sm text-rose-700">{actionError}</p>}
       {/* Main Integration Card */}
       <div className="max-w-xl mx-auto">
         <div className="bg-white rounded-xl border border-slate-200/80 p-5 sm:p-7 shadow-xs space-y-5">
@@ -204,7 +189,7 @@ export const ConexoesView: React.FC<ConexoesViewProps> = () => {
               </a>
             </div>
           )}
-          {!isCurrentConnected ? (
+          {store.loading?<p role="status" className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="w-4 h-4 animate-spin"/>Carregando configurações salvas…</p>:store.error?<div role="alert" className="space-y-3 text-sm text-rose-700"><p>{store.error}</p><button type="button" onClick={()=>{void store.reload();}} className="font-semibold underline">Tentar novamente</button></div>:!isCurrentConnected ? (
             <>
               {/* Notice Callout */}
               <div className="p-3.5 rounded-lg bg-amber-50/70 border border-amber-200/60 flex items-start gap-3 text-amber-900">
@@ -223,7 +208,10 @@ export const ConexoesView: React.FC<ConexoesViewProps> = () => {
                   </label>
                   <input
                     type="text"
+                    aria-label="Nome completo"
+                    disabled={isLoading}
                     required
+                    maxLength={100}
                     value={formData[activeChannel].name}
                     onChange={(e) => handleInputChange("name", e.target.value)}
                     placeholder="Ex: João da Silva"
@@ -238,7 +226,10 @@ export const ConexoesView: React.FC<ConexoesViewProps> = () => {
                   </label>
                   <input
                     type="email"
+                    aria-label="Email"
+                    disabled={isLoading}
                     required
+                    maxLength={254}
                     value={formData[activeChannel].email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
                     placeholder="voce@exemplo.com"
@@ -256,7 +247,7 @@ export const ConexoesView: React.FC<ConexoesViewProps> = () => {
                     {isLoading ? (
                       <>
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Autenticando {currentChannel.name}...</span>
+                        <span>Salvando {currentChannel.name}...</span>
                       </>
                     ) : (
                       <>
@@ -278,14 +269,14 @@ export const ConexoesView: React.FC<ConexoesViewProps> = () => {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-slate-900 text-sm">
-                      {currentChannel.name} Conectada
+                      {currentChannel.name} — Dados salvos
                     </span>
                     <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[10px] font-mono-code font-semibold">
                       ATIVO
                     </span>
                   </div>
                   <p className="text-xs text-slate-600 mt-0.5">
-                    Sincronização em tempo real ativada para catálogo, produtos mais vendidos e comissões automáticas.
+                    Configuração salva na sua conta. Ela será recuperada quando você entrar novamente, inclusive em outro dispositivo.
                   </p>
                 </div>
               </div>
@@ -301,31 +292,25 @@ export const ConexoesView: React.FC<ConexoesViewProps> = () => {
                   <span className="font-mono-code text-slate-900">{connectedState[activeChannel].email}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-500">Protocolo de Encriptação:</span>
-                  <span className="font-mono-code text-[11px] text-emerald-700 font-medium">TLS 1.3 • SHA-256</span>
+                  <span className="text-slate-500">Armazenamento:</span>
+                  <span className="font-mono-code text-[11px] text-emerald-700 font-medium">Salvo na sua conta</span>
                 </div>
               </div>
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
                 <button
-                  onClick={() => {
-                    setIsLoading(true);
-                    setTimeout(() => {
-                      setIsLoading(false);
-                      setSuccessToast("Catálogo e webhook sincronizados com sucesso!");
-                      setTimeout(() => setSuccessToast(null), 3000);
-                    }, 800);
-                  }}
+                  onClick={async()=>{setIsLoading(true);setActionError('');setSuccessToast(null);try{await store.reload();}finally{setIsLoading(false);}}}
                   disabled={isLoading}
                   className="w-full sm:flex-1 py-2 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
-                  <span>Sincronizar Dados Agora</span>
+                  <span>Atualizar Dados Salvos</span>
                 </button>
 
                 <button
                   onClick={handleDisconnect}
+                  disabled={isLoading}
                   className="w-full sm:w-auto py-2 px-3 rounded-lg border border-slate-200 text-rose-600 hover:bg-rose-50 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <Unlink className="w-3.5 h-3.5" />
