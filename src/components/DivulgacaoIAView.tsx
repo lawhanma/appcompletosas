@@ -1,3 +1,5 @@
+import {usePromotionCampaign} from '../hooks/usePromotionCampaign';
+import {PromotionCampaignCard} from './PromotionCampaignCard';
 import {CampaignProfileField} from './CampaignProfileField';
 import {useCampaignProfile,CampaignProfile} from '../hooks/useCampaignProfile';
 import React, { useState, useEffect, useRef } from "react";
@@ -38,6 +40,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
   const { state, userCode, isVip, addCommission, consumeAiCredit } = useFinancial();
   const [renewalOpen, setRenewalOpen] = useState(false);
   const profilePicker=useCampaignProfile();
+  const promotion=usePromotionCampaign();
   const [campaignProfile,setCampaignProfile]=useState<CampaignProfile|null>(null);
   const dailyCredits = isVip ? 5 : 4;
   const {record} = useDailyMissions();
@@ -126,13 +129,14 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
   }, []);
 
   // Run Automated Posting Simulation (~30s realistic sequential process)
-  const handleStartAutoPosting = () => {
+  const handleStartAutoPosting = async () => {
     if(isPosting)return;
     const chosenProfile=profilePicker.requireProfile();
     if(!chosenProfile)return;
     if (state.aiCredits <= 0) {setRenewalOpen(true);return;}
     const campaignLink = validateAffiliateLink(affiliateLink);
     if (!campaignLink) {setLinkError('Cole um link de afiliado válido, começando com https:// ou http://.');return;}
+    if(!(await promotion.start(chosenProfile.id,selectedProduct.name)))return;
     setLinkError('');
     setCampaignProfile(chosenProfile);
 
@@ -279,7 +283,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
         salesCount: sales,
         commissionAmount: commission,
         grossSales: gross,
-        views: reachViews
+        views: promotion.enabled?0:reachViews
       });
 
       if (commission > 0) {
@@ -292,6 +296,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
           sales
         );
       }
+      void promotion.complete();
       setIsPosting(false);
       if (state.aiCredits <= 1) setRenewalOpen(true);
       record('campaign',`${selectedProduct.id}:${Date.now()}`);
@@ -302,6 +307,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
     <div className="space-y-6">
       {renewalOpen && <CreditRenewalModal onClose={() => setRenewalOpen(false)} />}
       {state.aiCredits <= 0 && !isPosting && <button type="button" onClick={() => setRenewalOpen(true)} className="w-full rounded-xl bg-orange-50 border border-orange-200 p-4 text-sm font-semibold text-orange-700">Seus créditos acabaram — renovar créditos</button>}
+      <PromotionCampaignCard campaign={promotion}/>
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-3.5 py-2.5 rounded-lg shadow-lg flex items-center gap-2 text-xs font-medium animate-in fade-in">
@@ -421,9 +427,9 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
                 </div>
               </div>
 
-              <CampaignProfileField {...profilePicker.fieldProps} disabled={isPosting}/>
+              <CampaignProfileField {...profilePicker.fieldProps} disabled={isPosting||promotion.busy}/>
               {campaignProfile&&(isPosting||campaignResult)&&<p className="text-xs font-medium text-slate-700">Perfil da campanha: {campaignProfile.label}</p>}
-              <AffiliateLinkField value={affiliateLink} onChange={value=>{setAffiliateLink(value);setLinkError('');}} error={linkError} disabled={isPosting}/>
+              <AffiliateLinkField value={affiliateLink} onChange={value=>{setAffiliateLink(value);setLinkError('');}} error={linkError} disabled={isPosting||promotion.busy}/>
 
               <p className="text-xs text-slate-500 italic px-0.5 leading-relaxed">
                 "{selectedProduct.description || `${selectedProduct.name} de alta conversão, qualidade premium e entrega rápida garantida na Shopee.`}"
@@ -466,7 +472,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
                     <div className="flex items-center gap-2 text-slate-800">
                       <Loader2 className="w-3.5 h-3.5 animate-spin text-[#EE4D2D]" />
                       <span className="uppercase tracking-wider">
-                        PUBLICANDO NAS 6 REDES SOCIAIS...
+                        {promotion.enabled?'PREPARANDO DIVULGAÇÃO…':'PUBLICANDO NAS 6 REDES SOCIAIS...'}
                       </span>
                     </div>
                     <span className="font-mono-code font-bold text-slate-900 text-sm">{postingProgress}%</span>
@@ -481,7 +487,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
 
                   <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/70 flex items-center gap-2 text-xs text-slate-700">
                     <Sparkles className="w-3.5 h-3.5 text-orange-500 shrink-0 animate-pulse" />
-                    <span className="font-medium italic truncate">{postingStatusMessage}</span>
+                    <span className="font-medium italic truncate">{promotion.enabled?'Preparando a divulgação para o perfil selecionado…':postingStatusMessage}</span>
                   </div>
                 </div>
 
@@ -539,7 +545,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
                           {st === "publicado" ? (
                             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold">
                               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                              <span>PUBLICADO</span>
+                              <span>{promotion.enabled?'PREPARADO':'PUBLICADO'}</span>
                             </span>
                           ) : st === "publicando" ? (
                             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#EE4D2D] text-white text-[10px] font-bold shadow-2xs">
@@ -567,7 +573,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
                   </div>
                   <div>
                     <span className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider">
-                      CAMPANHA DISPARADA COM SUCESSO!
+                      {promotion.enabled?'DIVULGAÇÃO REGISTRADA NO SHOPGO':'CAMPANHA DISPARADA COM SUCESSO!'}
                     </span>
                     <h3 className="text-base font-bold text-slate-900 font-display">
                       Resultados da Divulgação Automática
@@ -578,13 +584,13 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="p-3.5 bg-orange-50/50 border border-orange-200/70 rounded-lg">
                     <span className="text-[10px] font-medium text-slate-500 uppercase">
-                      Comissão Gerada
+                      {promotion.enabled?'Comissão promocional':'Comissão Gerada'}
                     </span>
                     <div className="text-xl font-mono-code font-bold text-[#EE4D2D] mt-1">
-                      R$ {campaignResult.commissionAmount.toFixed(2).replace(".", ",")}
+                      R$ {(promotion.enabled?(promotion.award?.amount_cents||0)/100:campaignResult.commissionAmount).toFixed(2).replace(".", ",")}
                     </div>
                     <span className="text-[10px] text-emerald-700 font-medium">
-                      Creditada no Financeiro
+                      {promotion.enabled?'Liberação após 8 dias':'Creditada no Financeiro'}
                     </span>
                   </div>
 
@@ -631,7 +637,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
                   <button type="button" onClick={async()=>{try {await navigator.clipboard.writeText(campaignResult.copyText);setToastMessage('Texto da campanha copiado!');setTimeout(()=>setToastMessage(null),3000);} catch {setToastMessage('Selecione o texto acima para copiar.');}}} className="text-xs font-semibold text-[#EE4D2D]">Copiar texto da campanha</button>
                 </div>
 
-                {campaignResult.commissionAmount <= 0 && !(userCode === "123456" || userCode === "12456") ? (
+                {promotion.enabled?<p className="text-xs text-slate-600">A comissão promocional é registrada como pendente no financeiro e liberada após 8 dias. Não representa uma venda.</p>:campaignResult.commissionAmount <= 0 && !(userCode === "123456" || userCode === "12456") ? (
                   <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200/80 text-slate-700 text-xs flex items-center justify-between">
                     <span>
                       ℹ️ <strong>Divulgação Concluída:</strong> Anúncios e links de afiliado ativos nas 6 redes sociais gerando tráfego orgânico e alcance!
@@ -640,7 +646,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
                 ) : (
                   <div className="p-3.5 rounded-lg bg-emerald-50/70 border border-emerald-200/70 text-emerald-900 text-xs flex items-center justify-between">
                     <span>
-                      🎉 Os ganhos de <strong>R$ {campaignResult.commissionAmount.toFixed(2).replace(".", ",")}</strong> já estão disponíveis no seu extrato do Financeiro via Pix.
+                      🎉 Os ganhos de <strong>R$ {(promotion.enabled?(promotion.award?.amount_cents||0)/100:campaignResult.commissionAmount).toFixed(2).replace(".", ",")}</strong> já estão disponíveis no seu extrato do Financeiro via Pix.
                     </span>
                   </div>
                 )}
@@ -698,7 +704,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
                     return (
                       <div
                         key={product.id}
-                        onClick={() => setSelectedProduct(product)}
+                        onClick={() => {if(!promotion.busy&&!isPosting)setSelectedProduct(product);}}
                         className={`p-2.5 rounded-lg border cursor-pointer transition-colors flex items-center justify-between gap-2.5 ${
                           isSelected
                             ? "border-[#EE4D2D] bg-orange-50/30"
@@ -755,7 +761,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
                   <div className="flex justify-center">
                     <button
                       onClick={handleStartAutoPosting}
-                      disabled={isPosting}
+                      disabled={isPosting||promotion.busy}
                       className="w-full sm:w-auto min-w-[260px] py-2.5 px-6 rounded-lg bg-[#EE4D2D] hover:bg-[#E03A17] text-white font-medium text-xs shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
                     >
                       <Play className="w-3.5 h-3.5 fill-white" />

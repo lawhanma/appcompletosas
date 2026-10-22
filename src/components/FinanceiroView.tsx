@@ -1,3 +1,6 @@
+import {usePromotionRewards} from '../context/PromotionRewards';
+import {useCloudAccount} from '../context/CloudAccount';
+import {PromotionFinancialPanel} from './PromotionFinancialPanel';
 import React, { useState } from "react";
 import { useFinancial } from "../context/FinancialContext";
 import { 
@@ -15,7 +18,16 @@ import {
   Info 
 } from "lucide-react";
 
-export const FinanceiroView: React.FC = () => {
+export const FinanceiroView:React.FC=()=>{
+ const rewards=usePromotionRewards(),account=useCloudAccount();
+ if(account?.membership.plan==='standard'&&rewards){
+  if(rewards.loading)return <p role="status" className="p-6 text-sm text-slate-500">Carregando financeiro…</p>;
+  if(rewards.error)return <div role="alert" className="p-6 text-sm text-rose-700">{rewards.error}<button onClick={()=>{void rewards.reload();}} className="ml-2 underline">Tentar novamente</button></div>;
+  if(rewards.wallet.enabled)return <PromotionFinancialPanel/>;
+ }
+ return <LegacyFinanceiroView/>;
+};
+const LegacyFinanceiroView: React.FC = () => {
   const { state, requestWithdrawal: _requestWithdrawal, releaseDeliveredSale } = useFinancial();
   const [withdrawAmount, setWithdrawAmount] = useState<string>("");
   const [keyType, setKeyType] = useState<string>("CPF");

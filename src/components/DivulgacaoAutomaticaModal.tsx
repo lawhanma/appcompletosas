@@ -1,3 +1,5 @@
+import {usePromotionCampaign} from '../hooks/usePromotionCampaign';
+import {PromotionCampaignCard} from './PromotionCampaignCard';
 import {CampaignProfileField} from './CampaignProfileField';
 import {useCampaignProfile,CampaignProfile} from '../hooks/useCampaignProfile';
 import React, { useState, useEffect } from "react";
@@ -68,6 +70,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
   const { addCommission, userCode, state, consumeAiCredit } = useFinancial();
   const [renewalOpen, setRenewalOpen] = useState(false);
   const profilePicker=useCampaignProfile();
+  const promotion=usePromotionCampaign();
   const [campaignProfile,setCampaignProfile]=useState<CampaignProfile|null>(null);
   const {record} = useDailyMissions();
   const [affiliateLink,setAffiliateLink] = useState('');
@@ -192,13 +195,14 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
   ]);
 
   // Start automated distribution process
-  const startDistribution = () => {
+  const startDistribution = async () => {
     if(phase!=="idle"&&phase!=="results")return;
     const chosenProfile=profilePicker.requireProfile();
     if(!chosenProfile)return;
     if (state.aiCredits <= 0) {setRenewalOpen(true);return;}
     const validLink = validateAffiliateLink(affiliateLink);
     if (!validLink) {setLinkError('Cole um link de afiliado válido, começando com https:// ou http://.');return;}
+    if(!(await promotion.start(chosenProfile.id,product.name)))return;
     setLinkError('');setCampaignLink(validLink);setCampaignProfile(chosenProfile);
     setPhase("loading");
     setLoadingStepIndex(0);
@@ -321,6 +325,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
               Object.values(CAMPAIGN_SALES).reduce((a,b)=>a+b,0)
             );
           }
+          void promotion.complete();
           consumeAiCredit();
           if (state.aiCredits <= 1) setRenewalOpen(true);
           setPhase("results");
@@ -336,7 +341,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
   const isVipUser = userCode === "123456" || userCode === "12456";
   const totalSales = isVipUser ? platforms.reduce((acc, p) => acc + p.salesCount, 0) : 0;
   const totalRevenue = isVipUser ? totalSales * product.price : 0;
-  const totalCommission = isVipUser ? (earnedCommission > 0 ? earnedCommission : totalSales * product.commissionValue) : 0;
+  const totalCommission = promotion.enabled?(promotion.award?.amount_cents||0)/100:isVipUser ? (earnedCommission > 0 ? earnedCommission : totalSales * product.commissionValue) : 0;
   const totalReach = platforms.reduce((acc, p) => acc + p.views, 0);
 
   // Copy full sales campaign report
@@ -348,7 +353,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
       `💰 Preço: R$ ${product.price.toFixed(2).replace(".", ",")}\n` +
       `🔥 Vendas Realizadas: ${totalSales} vendas\n` +
       `💵 Faturamento Total: R$ ${totalRevenue.toFixed(2).replace(".", ",")}\n` +
-      `💎 Sua Comissão Líquida (PIX): R$ ${totalCommission.toFixed(2).replace(".", ",")}\n` +
+      `💎 ${promotion.enabled?'Comissão promocional ShopGO (liberação após 8 dias)':'Sua Comissão Líquida (PIX)'}: R$ ${totalCommission.toFixed(2).replace(".", ",")}\n` +
       `👥 Pessoas Alcançadas: ${totalReach.toLocaleString("pt-BR")} visualizações\n\n` +
       `📊 Desempenho por Rede Social:\n` +
       platforms.map(p => `• ${p.name}: ${p.salesCount} vendas (${p.views.toLocaleString("pt-BR")} views)`).join("\n") +
@@ -407,6 +412,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
 
         {/* Modal Body */}
         <div className="p-5 sm:p-6 overflow-y-auto space-y-6">
+          <PromotionCampaignCard campaign={promotion}/>
           {campaignProfile&&phase!=="idle"&&<p className="text-sm font-medium text-slate-700">Perfil da campanha: {campaignProfile.label}</p>}
           {/* Selected Product Summary Card */}
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -516,6 +522,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
                 <button
                   type="button"
                   onClick={startDistribution}
+                  disabled={promotion.busy}
                   className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-orange-500 via-[#FF5722] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-black text-sm flex items-center justify-center gap-2.5 shadow-xl shadow-orange-500/25 transition-all transform hover:scale-[1.01] cursor-pointer"
                 >
                   <Zap className="w-5 h-5 fill-white" />
@@ -696,7 +703,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
                 </h3>
 
                 <p className="text-xs sm:text-sm text-emerald-100 max-w-xl mx-auto">
-                  A inteligência artificial distribuiu os vídeos e copies nos melhores horários, gerando conversões instantâneas na sua conta de afiliado.
+                  {promotion.enabled?'Atividade concluída no ShopGO. A comissão promocional fica pendente por 8 dias; confira o registro no financeiro.':'A inteligência artificial distribuiu os vídeos e copies nos melhores horários, gerando conversões instantâneas na sua conta de afiliado.'}
                 </p>
 
                 {/* 4 Main Numbers Highlight Cards */}
@@ -716,11 +723,11 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
                   </div>
 
                   <div className="p-3 bg-white/25 backdrop-blur-md rounded-2xl border border-white/40 text-center shadow-lg">
-                    <span className="text-[10px] text-amber-200 uppercase font-black block">Sua Comissão Pix</span>
+                    <span className="text-[10px] text-amber-200 uppercase font-black block">{promotion.enabled?'Comissão promocional':'Sua Comissão Pix'}</span>
                     <span className="text-2xl font-black text-amber-300">
                       R$ {totalCommission.toFixed(2).replace(".", ",")}
                     </span>
-                    <span className="text-[9px] text-white/90 block font-bold">100% líquido p/ saque</span>
+                    <span className="text-[9px] text-white/90 block font-bold">{promotion.enabled?'Liberação após 8 dias':'100% líquido p/ saque'}</span>
                   </div>
 
                   <div className="p-3 bg-white/15 backdrop-blur-md rounded-2xl border border-white/20 text-center">
@@ -734,7 +741,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
               </div>
 
               {/* Breakdown by Social Network Table */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
+              {!promotion.enabled&&<div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-[#FF5722]" />
@@ -780,7 +787,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </div>}
 
               <div className="rounded-xl border border-slate-200 p-4 text-xs text-slate-600 break-all">Link utilizado na campanha: <a href={campaignLink} target="_blank" rel="noopener noreferrer" className="text-[#EE4D2D] underline">{campaignLink}</a></div>
 
@@ -789,6 +796,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
                 <button
                   type="button"
                   onClick={startDistribution}
+                  disabled={promotion.busy}
                   className="py-3 px-5 rounded-2xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-2 transition-all cursor-pointer"
                 >
                   <RotateCcw className="w-4 h-4 text-[#FF5722]" />

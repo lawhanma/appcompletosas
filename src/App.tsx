@@ -1,3 +1,4 @@
+import {PromotionRewardsProvider} from './context/PromotionRewards';
 import React, { useState, useEffect } from "react";
 import { NavTab, Product } from "./types";
 import { FinancialProvider, useFinancial } from "./context/FinancialContext";
@@ -207,11 +208,11 @@ function AppContent() {
 export default function App() {
   return (
     <CloudAccountGate>
-      <FinancialProvider>
+      <PromotionRewardsProvider><FinancialProvider>
         <DailyMissionsProvider>
         <AppContent />
         </DailyMissionsProvider>
-      </FinancialProvider>
+      </FinancialProvider></PromotionRewardsProvider>
     </CloudAccountGate>
   );
 }
