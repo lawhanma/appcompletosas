@@ -7,7 +7,7 @@ import {getPresentationCode} from '../utils/presentationAccount';
 
 export interface CloudProfile { id: string; full_name: string; phone: string; pix_key: string }
 interface Membership { plan: 'standard' | 'vip'; active: boolean }
-interface Account { profile: CloudProfile; membership: Membership; updateProfile: (value: CloudProfile) => void; signOut: () => Promise<void> }
+interface Account { unlimitedAiCredits: boolean; profile: CloudProfile; membership: Membership; updateProfile: (value: CloudProfile) => void; signOut: () => Promise<void> }
 const AccountContext = createContext<Account | null>(null);
 export const useCloudAccount = () => useContext(AccountContext);
 
@@ -19,6 +19,7 @@ export function CloudAccountGate({children}: {children: React.ReactNode}) {
   const [profile, setProfile] = useState<CloudProfile | null>(null);
   const [membership, setMembership] = useState<Membership | null>(null);
   const [revision, setRevision] = useState(0);
+  const [unlimitedAiCredits,setUnlimitedAiCredits]=useState(false);
   const [code, setCode] = useState('');
   const [activating, setActivating] = useState(false);
 
@@ -39,7 +40,7 @@ export function CloudAccountGate({children}: {children: React.ReactNode}) {
   useEffect(() => {
     if (!supabase) return;
     let live = true;
-    setProfile(null); setMembership(null); setError('');
+    setProfile(null); setMembership(null); setUnlimitedAiCredits(false); setError('');
     if (!session) { setLoading(false); return; }
     setLoading(true);
     async function load() {
@@ -48,15 +49,16 @@ export function CloudAccountGate({children}: {children: React.ReactNode}) {
       if (identityError || !identity.user || identity.user.id !== session!.user.id) {
         setError('Não foi possível validar sua sessão. Entre novamente.'); setLoading(false); return;
       }
-      const [p, m] = await Promise.all([
+      const [p, m, credits] = await Promise.all([
         supabase!.from('profiles').select('id,full_name,phone,pix_key').eq('id', identity.user.id).single(),
         supabase!.from('memberships').select('plan,active').eq('user_id', identity.user.id).maybeSingle(),
+        supabase!.from('ai_credit_entitlements').select('unlimited').eq('user_id',identity.user.id).maybeSingle(),
       ]);
       if (!live) return;
-      if (p.error || m.error) {
+      if (p.error || m.error || credits.error) {
         setError('Não foi possível carregar sua conta. Tente novamente em instantes.');
       } else {
-        setProfile(p.data); setMembership(m.data);
+        setProfile(p.data); setMembership(m.data); setUnlimitedAiCredits(credits.data?.unlimited===true);
         if (m.data?.active) {
           // Cache de apresentação para telas existentes; não concede autorização.
           internalDb.clearSession();
@@ -102,7 +104,7 @@ export function CloudAccountGate({children}: {children: React.ReactNode}) {
     </form>
     <button onClick={signOut}>Sair da conta</button>
   </Notice>;
-  return <AccountContext.Provider value={{profile:profile!,membership,updateProfile:setProfile,signOut}}>
+  return <AccountContext.Provider value={{unlimitedAiCredits,profile:profile!,membership,updateProfile:setProfile,signOut}}>
     <React.Fragment key={session.user.id}>{children}</React.Fragment>
   </AccountContext.Provider>;
 }

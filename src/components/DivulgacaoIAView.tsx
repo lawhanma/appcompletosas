@@ -37,7 +37,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
   onOpenVideoCreator,
   defaultSubTab = "automatica"
 }) => {
-  const { state, userCode, isVip, addCommission, consumeAiCredit } = useFinancial();
+  const { state, userCode, isVip, hasUnlimitedAiCredits, addCommission, consumeAiCredit } = useFinancial();
   const [renewalOpen, setRenewalOpen] = useState(false);
   const profilePicker=useCampaignProfile();
   const promotion=usePromotionCampaign();
@@ -377,7 +377,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
                 <div className="flex items-center justify-between text-xs font-medium text-slate-700">
                   <span>Status do Limite</span>
                   <span className="text-[#EE4D2D] font-mono-code font-semibold">
-                    {state.aiCredits}/{dailyCredits} ({Math.round((state.aiCredits / dailyCredits) * 100)}%)
+                    {hasUnlimitedAiCredits?'∞ Ilimitados':`${state.aiCredits}/${dailyCredits} (${Math.round((state.aiCredits / dailyCredits) * 100)}%)`}
                   </span>
                 </div>
 
@@ -391,7 +391,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
 
               {/* Alert note */}
               <div className="p-3 bg-slate-50 border border-slate-200/70 rounded-lg text-xs text-slate-600 leading-relaxed">
-                Você tem <strong>{state.aiCredits} créditos por dia</strong> — cada divulgação consome 1 crédito. Renovam todo dia às 0h (horário de Brasília).
+                {hasUnlimitedAiCredits?<>Você tem <strong>créditos ilimitados</strong> para divulgação automática. Suas divulgações não descontam créditos.</>:<>Você tem <strong>{state.aiCredits} créditos por dia</strong> — cada divulgação consome 1 crédito. Renovam todo dia às 0h (horário de Brasília).</>}
               </div>
             </div>
 

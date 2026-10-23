@@ -1,3 +1,4 @@
+import {useCloudAccount} from './CloudAccount';
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { PRODUCTS } from "../data/mockData";
 import { internalDb } from "../utils/internalDb";
@@ -46,6 +47,7 @@ export const FIVE_HOURS_MS = 5 * 60 * 60 * 1000; // 5 horas em milissegundos
 export const MAX_DAILY_COMMISSION_101190 = 0.00; // Nos códigos padrão (101190 e 887422) não entra nenhuma venda (R$ 0,00)
 
 interface FinancialContextType {
+  hasUnlimitedAiCredits: boolean;
   state: FinancialState;
   userCode: string;
   userEmail: string;
@@ -158,6 +160,7 @@ const INITIAL_123456: FinancialState = createCleanState("123456");
 const FinancialContext = createContext<FinancialContextType | null>(null);
 
 export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const hasUnlimitedAiCredits=useCloudAccount()?.unlimitedAiCredits===true;
   const [state, setState] = useState<FinancialState>(() => {
     try {
       const activeSession = internalDb.getActiveSession();
@@ -480,10 +483,11 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, []);
 
   const consumeAiCredit = useCallback(() => {
+    if(hasUnlimitedAiCredits)return true;
     if (state.aiCredits <= 0) return false;
     setState(prev => ({ ...prev, aiCredits: Math.max(0, prev.aiCredits - 1) }));
     return true;
-  }, [state.aiCredits]);
+  }, [state.aiCredits,hasUnlimitedAiCredits]);
 
   const requestWithdrawal = useCallback(async (amount: number, pixKey: string, keyType: string) => {
     if (amount <= 0 || amount > state.saldoDisponivel) return false;
@@ -673,7 +677,8 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   return (
     <FinancialContext.Provider
       value={{
-        state,
+        hasUnlimitedAiCredits,
+        state:hasUnlimitedAiCredits?{...state,aiCredits:Number.POSITIVE_INFINITY}:state,
         userCode: state.userCode,
         userEmail: state.userEmail,
         isVip,
