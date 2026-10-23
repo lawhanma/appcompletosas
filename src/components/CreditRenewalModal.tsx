@@ -6,12 +6,7 @@ export const CREDIT_PLANS = [
   {id: '35', name: '35 créditos', price: '34,90', description: 'Renove com 35 créditos para suas divulgações.', env: 'VITE_CHECKOUT_CREDITS_35'},
 ] as const;
 
-function checkoutUrl(value?: string): string | null {
-  try {
-    const url = new URL(value || '');
-    return url.protocol === 'https:' && !url.username && !url.password ? url.toString() : null;
-  } catch {return null;}
-}
+export const UNLIMITED_CHECKOUT_URL='https://go.ironpayapp.com.br/1apinrpokb';
 
 export const CreditRenewalModal: React.FC<{onClose: () => void}> = ({onClose}) => {
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -36,16 +31,16 @@ export const CreditRenewalModal: React.FC<{onClose: () => void}> = ({onClose}) =
       <button ref={closeRef} onClick={onClose} aria-label="Fechar renovação de créditos" className="absolute top-4 right-4 p-2 rounded-lg text-slate-500 hover:bg-slate-100"><X className="w-5 h-5"/></button>
       <div className="w-12 h-12 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center"><Sparkles className="w-6 h-6"/></div>
       <div><h2 id="credit-renewal-title" className="text-2xl font-bold text-slate-900 pr-6">Renove seus créditos</h2>
-        <p id="credit-renewal-description" className="text-sm text-slate-600 mt-2">Seus créditos de divulgação acabaram. Escolha uma opção para continuar.</p></div>
+        <p id="credit-renewal-description" className="text-sm text-slate-600 mt-2">Seus créditos de divulgação acabaram. No momento, apenas os créditos ilimitados estão disponíveis.</p></div>
       <div className="grid sm:grid-cols-2 gap-4">{CREDIT_PLANS.map(plan => {
-        const url = checkoutUrl(import.meta.env?.[plan.env]);
+        const unlimited=plan.id==='unlimited';
         return <div key={plan.id} className={`rounded-2xl border p-5 flex flex-col gap-3 ${plan.id === 'unlimited' ? 'border-orange-400 bg-orange-50' : 'border-slate-200 bg-white'}`}>
           {plan.id === 'unlimited' ? <InfinityIcon className="text-orange-600 w-7 h-7"/> : <Zap className="text-orange-600 w-7 h-7"/>}
           <h3 className="font-bold text-slate-900">{plan.name}</h3>
-          <p className="text-3xl font-bold text-slate-900"><span className="text-sm">R$ </span>{plan.price}</p>
+          <p className={`text-3xl font-bold ${unlimited?'text-slate-900':'text-slate-400 line-through'}`}><span className="text-sm">R$ </span>{plan.price}</p>
           <p className="text-xs text-slate-600 flex-1">{plan.description}</p>
-          {url ? <a href={url} target="_blank" rel="noopener noreferrer" className="rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-semibold text-sm px-3 py-3 text-center">{plan.id === 'unlimited' ? 'Quero ilimitados' : 'Renovar 35 créditos'}</a>
-            : <button disabled className="rounded-xl bg-slate-100 text-slate-500 font-semibold text-xs px-3 py-3">Pagamento em breve</button>}
+          {!unlimited&&<p className="text-xs font-medium text-slate-600">Indisponível. Apenas os créditos ilimitados estão disponíveis por R$ 64,90.</p>}
+          <a href={UNLIMITED_CHECKOUT_URL} target="_blank" rel="noopener noreferrer" className={`rounded-xl font-semibold text-sm px-3 py-3 text-center ${unlimited?'bg-orange-600 hover:bg-orange-700 text-white':'border border-slate-300 text-slate-700 hover:bg-slate-50'}`}>{unlimited?'Quero ilimitados':'Ir para ilimitados · R$ 64,90'}</a>
         </div>;
       })}</div>
       <p className="text-xs text-slate-500">A seleção do plano não libera créditos. A renovação depende da confirmação do pagamento.</p>
