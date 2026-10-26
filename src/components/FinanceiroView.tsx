@@ -1,3 +1,4 @@
+import {WithdrawalAnticipation} from './WithdrawalAnticipation';
 import {usePromotionRewards} from '../context/PromotionRewards';
 import {useCloudAccount} from '../context/CloudAccount';
 import {PromotionFinancialPanel} from './PromotionFinancialPanel';
@@ -49,16 +50,6 @@ const LegacyFinanceiroView: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<"todos" | "pendente" | "liberado">("todos");
-
-  const handleAntecipate = async () => {
-    setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
-      setShowAntecipationModal(false);
-      setSuccessMessage("Solicitação de antecipação enviada com sucesso para aprovação bancária!");
-      setTimeout(() => setSuccessMessage(null), 4000);
-    }, 1200);
-  };
 
   const handleWithdrawClick = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -302,7 +293,7 @@ const LegacyFinanceiroView: React.FC = () => {
             <span className="font-semibold text-amber-950">Saque Indisponível:</span>{" "}
             <span>Você poderá solicitar o saque após 30 dias utilizando a plataforma. Faltam <strong>30 dias</strong> para liberar seus saques.</span>
             <div className="text-[11px] text-amber-800 mt-0.5">
-              Para sacar antes, basta solicitar a antecipação porém terá uma taxa fixa de R$50,00
+              Consulte as condições de antecipação para comissões promocionais pendentes.
             </div>
           </div>
         </div>
@@ -392,7 +383,7 @@ const LegacyFinanceiroView: React.FC = () => {
               className="w-full sm:w-auto px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium text-xs rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5"
             >
               <Zap className="w-3.5 h-3.5 text-amber-600" />
-              <span>Solicitar Antecipação (Taxa R$ 50,00)</span>
+              <span>Consultar antecipação</span>
             </button>
           </div>
         </form>
@@ -519,54 +510,8 @@ const LegacyFinanceiroView: React.FC = () => {
               <Zap className="w-4 h-4" />
             </div>
 
-            <div>
-              <h3 className="text-base font-semibold text-slate-900 font-display">
-                Antecipação de Saque Shop GO
-              </h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Conforme a política de segurança, novos usuários têm o período de 30 dias para liberação do primeiro saque sem taxas.
-              </p>
-            </div>
-
-            <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200/70 text-xs text-slate-700 space-y-1.5">
-              <div className="flex justify-between font-medium">
-                <span className="text-slate-500">Saldo Disponível:</span>
-                <span className="text-emerald-700 font-semibold font-mono-code">R$ {state.saldoDisponivel.toFixed(2).replace(".", ",")}</span>
-              </div>
-              <div className="flex justify-between font-medium">
-                <span className="text-slate-500">Saldo Pendente a Receber:</span>
-                <span className="text-slate-800 font-semibold font-mono-code">R$ {state.saldoPendente.toFixed(2).replace(".", ",")}</span>
-              </div>
-              <p className="text-[10px] text-slate-500 italic pt-0.5">
-                *O saldo pendente é liberado assim que o produto for recebido pelo cliente.
-              </p>
-              <div className="flex justify-between text-slate-600 pt-1.5 border-t border-slate-200">
-                <span>Taxa Fixa de Antecipação:</span>
-                <span className="font-semibold text-rose-600 font-mono-code">- R$ 50,00</span>
-              </div>
-              <div className="border-t border-slate-200 pt-1.5 flex justify-between font-semibold text-slate-900">
-                <span>Chave Pix:</span>
-                <span className="font-mono-code">{pixKey}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowAntecipationModal(false)}
-                className="px-3.5 py-2 rounded-lg border border-slate-200 text-slate-600 font-medium text-xs hover:bg-slate-50 cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleAntecipate}
-                disabled={isProcessing}
-                className="px-4 py-2 rounded-lg bg-[#EE4D2D] hover:bg-[#E03A17] text-white font-medium text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
-              >
-                {isProcessing ? "Solicitando..." : "Confirmar Antecipação"}
-              </button>
-            </div>
+            <WithdrawalAnticipation/>
+            <button type="button" onClick={()=>setShowAntecipationModal(false)} className="w-full rounded-lg border border-slate-200 px-4 py-2 text-xs text-slate-600">Voltar</button>
           </div>
         </div>
       )}

@@ -1,3 +1,4 @@
+import {WithdrawalAnticipation} from './WithdrawalAnticipation';
 import React,{useRef,useState} from 'react';
 import {PromotionWallet,usePromotionRewards} from '../context/PromotionRewards';
 import {useCloudAccount} from '../context/CloudAccount';
@@ -40,5 +41,6 @@ export const PromotionFinancialWorkspace:React.FC<{wallet:PromotionWallet;error:
    {message&&<p role={failed?'alert':'status'} className={`text-sm ${failed?'text-rose-700':'text-emerald-700'}`}>{message}</p>}
    {wallet.withdrawals.length>0&&<ul className="space-y-2 border-t border-slate-100 pt-4">{wallet.withdrawals.map(w=><li key={w.id} className="text-xs text-slate-600 flex flex-wrap justify-between gap-2"><span>{rewardDate(w.created_at)} · {rewardMoney(w.amount_cents)}</span><span>{w.status==='paid'?`Pagamento confirmado em ${rewardDate(w.paid_at!)}`:w.status==='requested'?'Solicitado · aguardando pagamento':'Solicitação recusada · saldo devolvido'}</span></li>)}</ul>}
   </section>
+  <WithdrawalAnticipation/>
  </div>;
 };
