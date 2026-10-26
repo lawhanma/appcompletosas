@@ -1,3 +1,4 @@
+import {usePromotionRewards} from '../context/PromotionRewards';
 import React, { useState, useMemo } from "react";
 import { Product, NavTab } from "../types";
 import { PRODUCTS } from "../data/mockData";
@@ -38,6 +39,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
     simulateLiveSale: _simulateLiveSale, 
     releaseDeliveredSale 
   } = useFinancial();
+  const promotion=usePromotionRewards();
+  const promotional=promotion?.wallet.enabled===true;
+  const available=promotional?promotion!.wallet.available_cents/100:state.saldoDisponivel;
+  const pending=promotional?promotion!.wallet.pending_cents/100:state.saldoPendente;
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodFilter>("hoje");
   const [selectedMetric, setSelectedMetric] = useState<ChartMetric>("faturamento");
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -61,13 +66,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
   }, [selectedPeriod, state.faturamentoDiario, state.faturamentoMes, isVip]);
 
   const displayComissoes = useMemo(() => {
+    if(promotional)return available+pending+promotion!.wallet.requested_cents/100;
     if (!isVip) return 0.00;
     const totalComissao = state.saldoDisponivel + state.saldoPendente;
     if (selectedPeriod === "hoje") return totalComissao;
     if (selectedPeriod === "ontem") return 426.00;
     if (selectedPeriod === "7dias") return 2790.00;
     return 15370.50;
-  }, [selectedPeriod, state.saldoDisponivel, state.saldoPendente, isVip]);
+  }, [selectedPeriod, state.saldoDisponivel, state.saldoPendente, isVip,promotional,available,pending,promotion?.wallet.requested_cents]);
 
   const displayPedidos = useMemo(() => {
     if (!isVip) return 0;
@@ -153,10 +159,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
     return d;
   }, [svgCoordinates]);
 
-  // Daily target calculation
-  const metaDiaria = isVip ? 3000.00 : 0.00;
-  const percentMeta = metaDiaria > 0 ? Math.min(100, (state.faturamentoDiario / metaDiaria) * 100) : 0;
-  const remainingMeta = Math.max(0, metaDiaria - state.faturamentoDiario);
 
   const formatCurrency = (val: number) => {
     if (hideValues) return "R$ ••••••";
@@ -269,37 +271,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-slate-100">
-            {selectedPeriod === "hoje" ? (
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-slate-500">
-                    Meta diária: <strong className="text-slate-800 font-mono-code">{formatCurrency(metaDiaria)}</strong>
-                  </span>
-                  <span className="font-mono-code font-semibold text-slate-900">
-                    {percentMeta.toFixed(1)}%
-                  </span>
-                </div>
-                {/* Progress bar */}
-                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                  <div 
-                    className="bg-[#EE4D2D] h-full rounded-full transition-all duration-500 ease-out" 
-                    style={{ width: `${percentMeta}%` }}
-                  />
-                </div>
-                {isVip && remainingMeta > 0 && (
-                  <div className="text-[10px] text-slate-400 pt-0.5">
-                    Faltam <span className="font-mono-code font-semibold text-slate-700">{formatCurrency(remainingMeta)}</span> para a meta
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
-                <ArrowUpRight className="w-3.5 h-3.5" />
-                <span>+34.6% vs período anterior</span>
-              </div>
-            )}
-          </div>
+          <p className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500">Valores registrados no período selecionado.</p>
         </div>
 
         {/* Card 2: Saldo & Comissões Estimadas */}
@@ -307,7 +279,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
           <div>
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-slate-500">
-                Comissões & Saldo
+                {promotional?'Comissões promocionais':'Comissões & Saldo'}
               </span>
               <div className="w-7 h-7 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center">
                 <DollarSign className="w-3.5 h-3.5" />
@@ -326,16 +298,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
                 Disponível p/ Saque:
               </span>
               <span className="font-mono-code font-semibold text-emerald-700">
-                {formatCurrency(state.saldoDisponivel)}
+                {formatCurrency(available)}
               </span>
             </div>
-            <div className="flex items-center justify-between" title="Liberado automaticamente assim que o produto for entregue ao cliente">
+            <div className="flex items-center justify-between" title={promotional?'Liberação após 8 dias da divulgação':'Liberado automaticamente assim que o produto for entregue ao cliente'}>
               <span className="text-slate-600 flex items-center gap-1 text-[11px]">
                 <Clock className="w-3 h-3 text-amber-600 shrink-0" />
                 Pendente a receber:
               </span>
               <span className="font-mono-code font-semibold text-slate-800">
-                {formatCurrency(state.saldoPendente)}
+                {formatCurrency(pending)}
               </span>
             </div>
           </div>
@@ -706,7 +678,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
               className="w-full py-2 px-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold text-xs border border-emerald-200/80 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
               <DollarSign className="w-3.5 h-3.5 text-emerald-700" />
-              <span>Solicitar Saque PIX ({formatCurrency(state.saldoDisponivel)})</span>
+              <span>Solicitar Saque PIX ({formatCurrency(available)})</span>
             </button>
           </div>
         </div>

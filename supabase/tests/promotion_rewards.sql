@@ -20,7 +20,7 @@ do $$ begin
 end $$;
 reset role;
 do $$ declare cid uuid; r jsonb; again jsonb; total_ integer; t timestamptz; balance_ integer; wid uuid:=gen_random_uuid();begin
- for i in 1..20 loop
+ for i in 1..30 loop
   cid:=gen_random_uuid();perform public.start_promotion_campaign(cid,current_setting('qa.pa')::uuid,'Product QA');
   if i=1 then
    begin perform public.complete_promotion_campaign(cid);raise exception 'Instant completion accepted';exception when raise_exception then if sqlerrm<>'Campaign still running' then raise;end if;end;
@@ -33,8 +33,8 @@ do $$ declare cid uuid; r jsonb; again jsonb; total_ integer; t timestamptz; bal
   assert (r->>'amount_cents')::integer=0 or (r->>'amount_cents')::integer between 500 and 1500,'Reward out of bounds';
  end loop;
  total_:=(public.get_promotion_wallet()->>'earned_today_cents')::integer;
- assert total_ between 2501 and 3000,'Daily cap not respected';
- assert (public.get_promotion_wallet()->>'campaign_count')::integer=20,'Duplicate counted twice';
+ assert total_ between 4501 and 5000,'Daily cap not respected';
+ assert (public.get_promotion_wallet()->>'campaign_count')::integer=30,'Duplicate counted twice';
  assert (public.get_promotion_wallet()->>'available_cents')::integer=0,'Released before 8 days';
  begin perform public.request_promotion_withdrawal(wid,100,'qa@example.invalid');raise exception 'Early withdrawal accepted';exception when raise_exception then if sqlerrm<>'Insufficient released balance' then raise;end if;end;
  -- Move yesterday's earned history while preserving the exact 192-hour wait.

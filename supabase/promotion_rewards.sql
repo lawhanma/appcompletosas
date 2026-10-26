@@ -80,7 +80,7 @@ begin
    select count(*) into n from shopgo_rewards.campaigns where user_id=uid and completed_at is not null;
    select coalesce(sum(amount_cents),0) into daily from shopgo_rewards.campaigns where user_id=uid and (completed_at at time zone 'America/Sao_Paulo')::date=(finished at time zone 'America/Sao_Paulo')::date;
    -- The first completed campaign ever has no reward. Never issue < R$5 to fill the cap.
-   if n>=1 and 3000-daily>=500 then reward:=500+floor(random()*(least(1500,3000-daily)-500+1))::integer;end if;
+   if n>=1 and 5000-daily>=500 then reward:=500+floor(random()*(least(1500,5000-daily)-500+1))::integer;end if;
    update shopgo_rewards.campaigns set completed_at=finished,amount_cents=reward,available_at=case when reward>0 then finished+interval '192 hours' else null end where id=c.id returning * into c;
  end if;
  return jsonb_build_object('id',c.id,'amount_cents',c.amount_cents,'available_at',c.available_at,'completed_at',c.completed_at);
