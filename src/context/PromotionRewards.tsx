@@ -4,8 +4,8 @@ import {useCloudAccount} from './CloudAccount';
 export interface PromotionAward {id:string;amount_cents:number;available_at:string|null;completed_at:string}
 export interface PromotionItem extends PromotionAward {profile_id:string;profile_name:string;product:string}
 export interface PromotionWithdrawal {id:string;amount_cents:number;status:'requested'|'paid'|'rejected';created_at:string;paid_at:string|null}
-export interface PromotionWallet {enabled:boolean;server_now:string;campaign_count:number;earned_today_cents:number;pending_cents:number;available_cents:number;requested_cents:number;items:PromotionItem[];withdrawals:PromotionWithdrawal[]}
-const empty=():PromotionWallet=>({enabled:false,server_now:'',campaign_count:0,earned_today_cents:0,pending_cents:0,available_cents:0,requested_cents:0,items:[],withdrawals:[]});
+export interface PromotionWallet {enabled:boolean;server_now:string;campaign_count:number;daily_campaign_count:number;earned_today_cents:number;pending_cents:number;available_cents:number;requested_cents:number;items:PromotionItem[];withdrawals:PromotionWithdrawal[]}
+const empty=():PromotionWallet=>({enabled:false,server_now:'',campaign_count:0,daily_campaign_count:0,earned_today_cents:0,pending_cents:0,available_cents:0,requested_cents:0,items:[],withdrawals:[]});
 interface Rewards {wallet:PromotionWallet;loading:boolean;error:string;reload:()=>Promise<void>;begin:(profile:string,product:string)=>Promise<string>;complete:(id:string)=>Promise<PromotionAward>;withdraw:(id:string,cents:number,pix:string)=>Promise<void>}
 const Context=createContext<Rewards|null>(null);
 export const usePromotionRewards=()=>useContext(Context);

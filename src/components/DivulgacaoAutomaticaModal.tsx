@@ -1,8 +1,9 @@
+import {illustrativeReach} from '../utils/estimatedReach';
 import {usePromotionCampaign} from '../hooks/usePromotionCampaign';
 import {PromotionCampaignCard} from './PromotionCampaignCard';
 import {CampaignProfileField} from './CampaignProfileField';
 import {useCampaignProfile,CampaignProfile} from '../hooks/useCampaignProfile';
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Product } from "../types";
 import { useFinancial } from "../context/FinancialContext";
 import { 
@@ -71,6 +72,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
   const [renewalOpen, setRenewalOpen] = useState(false);
   const profilePicker=useCampaignProfile();
   const promotion=usePromotionCampaign();
+  const reachSeed=useRef('');
   const [campaignProfile,setCampaignProfile]=useState<CampaignProfile|null>(null);
   const {record} = useDailyMissions();
   const [affiliateLink,setAffiliateLink] = useState('');
@@ -203,6 +205,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
     const validLink = validateAffiliateLink(affiliateLink);
     if (!validLink) {setLinkError('Cole um link de afiliado válido, começando com https:// ou http://.');return;}
     if(!(await promotion.start(chosenProfile.id,product.name)))return;
+    reachSeed.current=crypto.randomUUID();
     setLinkError('');setCampaignLink(validLink);setCampaignProfile(chosenProfile);
     setPhase("loading");
     setLoadingStepIndex(0);
@@ -282,8 +285,8 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
                 ...p,
                 status: "published",
                 progress: 100,
-                views: realisticViews,
-                likes: realisticLikes,
+                views: promotion.enabled?illustrativeReach(`${reachSeed.current}:${targetId}`):realisticViews,
+                likes: promotion.enabled?0:realisticLikes,
                 salesCount: realisticSales
               };
             }
@@ -354,9 +357,9 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
       `🔥 Vendas Realizadas: ${totalSales} vendas\n` +
       `💵 Faturamento Total: R$ ${totalRevenue.toFixed(2).replace(".", ",")}\n` +
       `💎 ${promotion.enabled?'Comissão promocional ShopGO (liberação após 8 dias)':'Sua Comissão Líquida (PIX)'}: R$ ${totalCommission.toFixed(2).replace(".", ",")}\n` +
-      `👥 Pessoas Alcançadas: ${totalReach.toLocaleString("pt-BR")} visualizações\n\n` +
+      `👥 ${promotion.enabled?'Alcance estimado (ilustrativo, não medido)':'Pessoas Alcançadas'}: ${totalReach.toLocaleString("pt-BR")} visualizações\n\n` +
       `📊 Desempenho por Rede Social:\n` +
-      platforms.map(p => `• ${p.name}: ${p.salesCount} vendas (${p.views.toLocaleString("pt-BR")} views)`).join("\n") +
+      platforms.map(p => `• ${p.name}: ${p.salesCount} vendas (${p.views.toLocaleString("pt-BR")} ${promotion.enabled?'views estimadas, não medidas':'views'})`).join("\n") +
       `\n\nGerado automaticamente pelo Shop GO com IA.`;
 
     navigator.clipboard.writeText(reportText);
@@ -670,7 +673,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
                       {isPublished && (
                         <div className="mt-3 pt-2 border-t border-emerald-200 flex items-center justify-between text-[11px]">
                           <span className="font-bold text-slate-700 flex items-center gap-1">
-                            👁️ {p.views.toLocaleString("pt-BR")} visualizações
+                            👁️ {p.views.toLocaleString("pt-BR")} {promotion.enabled?'visualizações estimadas · não medidas':'visualizações'}
                           </span>
                           <span className="font-black text-emerald-700 flex items-center gap-1">
                             🛍️ {p.salesCount} vendas geradas
@@ -731,11 +734,11 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
                   </div>
 
                   <div className="p-3 bg-white/15 backdrop-blur-md rounded-2xl border border-white/20 text-center">
-                    <span className="text-[10px] text-emerald-100 uppercase font-black block">Alcance Total</span>
+                    <span className="text-[10px] text-emerald-100 uppercase font-black block">{promotion.enabled?'Alcance estimado':'Alcance Total'}</span>
                     <span className="text-xl sm:text-2xl font-black text-white">
                       +{totalReach.toLocaleString("pt-BR")}
                     </span>
-                    <span className="text-[9px] text-emerald-200 block">pessoas impactadas</span>
+                    <span className="text-[9px] text-emerald-200 block">{promotion.enabled?'Ilustrativo · não medido':'pessoas impactadas'}</span>
                   </div>
                 </div>
               </div>

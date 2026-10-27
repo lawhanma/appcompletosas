@@ -1,3 +1,4 @@
+import {illustrativeReach} from '../utils/estimatedReach';
 import {usePromotionCampaign} from '../hooks/usePromotionCampaign';
 import {PromotionCampaignCard} from './PromotionCampaignCard';
 import {CampaignProfileField} from './CampaignProfileField';
@@ -42,7 +43,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
   const profilePicker=useCampaignProfile();
   const promotion=usePromotionCampaign();
   const [campaignProfile,setCampaignProfile]=useState<CampaignProfile|null>(null);
-  const dailyCredits = isVip ? 5 : 4;
+  const dailyCredits = isVip||promotion.enabled ? 5 : 4;
   const {record} = useDailyMissions();
 
   const [subTab, setSubTab] = useState<"automatica" | "grupos" | "tiktok">(defaultSubTab);
@@ -283,7 +284,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
         salesCount: sales,
         commissionAmount: commission,
         grossSales: gross,
-        views: promotion.enabled?0:reachViews
+        views: promotion.enabled?illustrativeReach(crypto.randomUUID()):reachViews
       });
 
       if (commission > 0) {
@@ -620,13 +621,13 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
 
                   <div className="p-3.5 bg-slate-50 border border-slate-200/70 rounded-lg">
                     <span className="text-[10px] font-medium text-slate-500 uppercase">
-                      Alcance Total
+                      {promotion.enabled?'Alcance estimado':'Alcance Total'}
                     </span>
                     <div className="text-xl font-mono-code font-bold text-slate-900 mt-1">
                       {campaignResult.views.toLocaleString("pt-BR")}
                     </div>
                     <span className="text-[10px] text-slate-400">
-                      Pessoas impactadas
+                      {promotion.enabled?'Ilustrativo · não medido':'Pessoas impactadas'}
                     </span>
                   </div>
                 </div>

@@ -3,7 +3,9 @@
 ## Regra aprovada
 Somente novos cadastros com código de compra promocional vigente a partir da implantação do trigger. Contas anteriores não foram habilitadas. O trigger captura o código original no INSERT de auth.users; o código continua removido dos metadados e não concede acesso pelo JWT. Membership padrão ativa também é exigida para gerar recompensas.
 
-Primeira atividade concluída: zero. A partir da segunda desde o cadastro: valor aleatório em centavos entre R$5 e R$15, limitado ao restante do teto diário de R$50 no fuso America/Sao_Paulo. Se restarem menos de R$5, não remunera aquela atividade para evitar uma comissão abaixo do mínimo. O limite é um teto, não promessa de atingir exatamente R$50 todos os dias. Compartilhamentos manuais isolados não são contabilizados automaticamente por este fluxo.
+Ciclo diário de cinco divulgações concluídas (America/Sao_Paulo): primeira R$0; segunda à quinta R$13,25 cada. Total de R$53 por ciclo completo. Depois da quinta não há remuneração extra no mesmo dia, inclusive com créditos ilimitados. O contador diário vem do servidor e fornece cinco créditos por dia para contas elegíveis; ilimitados continuam sem limite de utilização. Compartilhamentos manuais isolados não são contados automaticamente.
+
+Registros e valores anteriores são preservados. Não há reprocessamento ou redução de recompensas antigas; em um dia de transição, créditos antigos podem impedir que o ciclo feche exatamente no novo total. A nova sequência completa fica garantida para dias iniciados sob a nova regra.
 
 A conclusão registrada nos dois fluxos automáticos chama o mesmo ledger no servidor, com produto e perfil proprietário. A atividade precisa durar ao menos30segundos. O fluxo atual NÃO comprova postagem externa nem cria venda, faturamento de produto, entrega ou comissão recebida de marketplace. A recompensa é custeada pelo dono da plataforma e aparece identificada como comissão promocional. O processo existente de divulgação prepara/representa uma atividade no app, sem publicação externa verificada. Não implementar contagens de vendas a partir deste ledger.
 
@@ -21,5 +23,7 @@ Fontes: supabase/promotion_rewards.sql; teste rollback supabase/tests/promotion_
 
 O teste exige qa.promotion_purchase_code configurado somente na sessão de teste, sem salvar o código de compra em arquivos versionados.
 
-Atualização: teto aumentado para R$50/dia; sem meta ou progresso de limite na dashboard. Regras consultáveis em detalhes no financeiro e na divulgação. Nenhum crédito retroativo ou alteração de saldos já existentes.
+Atualização anterior, substituída pelo ciclo de R$53: teto de R$50/dia; sem meta ou progresso de limite na dashboard. Regras consultáveis em detalhes no financeiro e na divulgação. Nenhum crédito retroativo ou alteração de saldos já existentes.
 Antecipação opcional: botão Solicitar antecipação abre https://go.ironpayapp.com.br/tgphlqdt9x em nova aba, somente quando a carteira cloud possui comissão pendente e a consulta não falhou. Liberação normal após8dias independe dessa contratação. Valores/condições ficam no checkout; sem taxa numérica inferida no app. O link não modifica saldo, não registra pagamento de taxa, não confirma Pix e não implementa liberação antecipada automática. Equipe deve confirmar pagamento/condições e fazer o acerto da carteira de forma administrativa; esse processamento não foi automatizado nesta alteração. Modal legado não anuncia mais aprovação bancária fictícia.
+
+Alcance estimado: ilustração local, sem medição das redes, exibida com rótulo explícito no resultado e relatório dos dois fluxos. Não é registrada como analytics, venda ou base para cálculo de comissão. Números não são retroalimentados no ledger.

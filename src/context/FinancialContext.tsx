@@ -1,3 +1,4 @@
+import {usePromotionRewards} from './PromotionRewards';
 import {useCloudAccount} from './CloudAccount';
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { PRODUCTS } from "../data/mockData";
@@ -161,6 +162,8 @@ const FinancialContext = createContext<FinancialContextType | null>(null);
 
 export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const hasUnlimitedAiCredits=useCloudAccount()?.unlimitedAiCredits===true;
+  const promotion=usePromotionRewards();
+  const promoCredits=promotion?.wallet.enabled?Math.max(0,5-(promotion.wallet.daily_campaign_count||0)):null;
   const [state, setState] = useState<FinancialState>(() => {
     try {
       const activeSession = internalDb.getActiveSession();
@@ -484,10 +487,11 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const consumeAiCredit = useCallback(() => {
     if(hasUnlimitedAiCredits)return true;
+    if(promoCredits!==null)return promoCredits>0;
     if (state.aiCredits <= 0) return false;
     setState(prev => ({ ...prev, aiCredits: Math.max(0, prev.aiCredits - 1) }));
     return true;
-  }, [state.aiCredits,hasUnlimitedAiCredits]);
+  }, [state.aiCredits,hasUnlimitedAiCredits,promoCredits]);
 
   const requestWithdrawal = useCallback(async (amount: number, pixKey: string, keyType: string) => {
     if (amount <= 0 || amount > state.saldoDisponivel) return false;
@@ -678,7 +682,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     <FinancialContext.Provider
       value={{
         hasUnlimitedAiCredits,
-        state:hasUnlimitedAiCredits?{...state,aiCredits:Number.POSITIVE_INFINITY}:state,
+        state:hasUnlimitedAiCredits?{...state,aiCredits:Number.POSITIVE_INFINITY}:promoCredits!==null?{...state,aiCredits:promoCredits}:state,
         userCode: state.userCode,
         userEmail: state.userEmail,
         isVip,

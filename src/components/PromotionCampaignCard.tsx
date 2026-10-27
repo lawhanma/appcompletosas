@@ -6,8 +6,8 @@ export function PromotionCampaignCard({campaign}:{campaign:ReturnType<typeof use
  if(!campaign.enabled&&!campaign.error)return null;
  return <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 space-y-2 text-sm" aria-label="Comissão promocional">
   <h3 className="font-semibold text-slate-900">Comissão promocional ShopGO</h3>
-  <p className="text-xs text-slate-600">Paga pela plataforma a partir da segunda divulgação concluída. De R$ 5 a R$ 15 por divulgação. Liberação após 8 dias.</p>
-  <details className="text-xs text-slate-600"><summary className="cursor-pointer">Regras da comissão promocional</summary><p className="mt-2">Limite de R$ 50 por dia, no horário de Brasília. A primeira divulgação não remunera.</p></details>
+  <p className="text-xs text-slate-600">Paga pela plataforma a partir da segunda divulgação concluída do dia. Liberação após 8 dias.</p>
+  <details className="text-xs text-slate-600"><summary className="cursor-pointer">Regras da comissão promocional</summary><p className="mt-2">Cinco divulgações concluídas no dia somam R$ 53: a primeira não remunera; da segunda à quinta, R$ 13,25 por atividade. Após a quinta, não há comissão adicional no mesmo dia. Horário de Brasília.</p></details>
   {campaign.award&&<p role="status" className="text-sm font-medium text-slate-900">{campaign.award.amount_cents>0?`${rewardMoney(campaign.award.amount_cents)} registrados no financeiro. Liberação: ${rewardDate(campaign.award.available_at!)}.`:'Divulgação registrada sem comissão: primeira divulgação ou limite diário de remuneração atingido.'}</p>}
   {campaign.busy&&<p role="status" className="text-xs text-slate-600">Consultando registro da comissão…</p>}
   {campaign.error&&<div role="alert" className="text-xs text-rose-700"><p>{campaign.error}</p>{campaign.unconfirmed&&<button disabled={campaign.busy} onClick={()=>{void campaign.complete();}} className="font-semibold underline mt-2">Tentar confirmar novamente</button>}</div>}
