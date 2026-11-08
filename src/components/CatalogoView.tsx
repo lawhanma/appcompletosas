@@ -59,7 +59,8 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
 
   // Activate Mining mode with live scanner animation
   const handleOpenMiningMode = () => {
-    setIsMiningScanning(true);
+    setSearchQuery("");
+    handleCompleteMining();
   };
 
   const handleCompleteMining = () => {
@@ -109,13 +110,17 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
               className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shrink-0"
             >
               <Flame className="w-3.5 h-3.5 text-orange-400" />
-              <span>Mineração de Produtos</span>
+              <span>Black Friday</span>
               <span className="bg-white/20 text-white text-[10px] font-mono-code font-semibold px-1.5 py-0.2 rounded">
                 TOP 10
               </span>
             </button>
           </div>
 
+          <button onClick={handleOpenMiningMode} className="w-full rounded-2xl bg-[#121212] border border-orange-500/20 p-6 sm:p-8 text-left text-white flex items-center justify-between gap-4 group">
+            <div><span className="text-[10px] uppercase tracking-[0.22em] text-orange-400 font-semibold">Seleção especial ShopGO</span><h2 className="mt-2 text-3xl sm:text-4xl font-black tracking-tight">BLACK <span className="text-orange-400">FRIDAY</span></h2><p className="mt-3 text-sm text-slate-300">Encontre seu próximo produto para divulgar.</p></div>
+            <ArrowRight className="h-7 w-7 text-orange-400 shrink-0 group-hover:translate-x-1 transition-transform" />
+          </button>
           {/* Supplier Cards List */}
           <div className="space-y-3">
             {SUPPLIERS.map((supplier) => {
@@ -223,14 +228,14 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
                   {isMiningMode ? (
                     <>
                       <Flame className="w-4 h-4 text-[#EE4D2D]" />
-                      <span>Mineração de Produtos: Top 10 Mais Vendidos</span>
+                      <span>Seleção Black Friday</span>
                     </>
                   ) : (
                     <span>Catálogo Shopee: {selectedNiche || "Todos os Produtos"}</span>
                   )}
                 </h2>
                 <p className="text-xs text-slate-500">
-                  {filteredProducts.length} produtos {isMiningMode ? "em alta selecionados para mineração" : "de alta conversão disponíveis"}
+                  {filteredProducts.length} produtos {isMiningMode ? "selecionados para sua campanha" : "de alta conversão disponíveis"}
                 </p>
               </div>
             </div>
@@ -254,7 +259,7 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
                 }`}
               >
                 <Flame className="w-3.5 h-3.5 text-orange-500" />
-                <span>Mineração de Produtos</span>
+                <span>Black Friday</span>
                 <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold ${
                   isMiningMode ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
                 }`}>
@@ -276,49 +281,22 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
             </div>
           </div>
 
-          {/* Special Banner when Mineração de Produtos is Active */}
           {isMiningMode && (
-            <div className="bg-slate-900 p-5 rounded-xl border border-slate-800 text-white shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-start sm:items-center gap-3.5">
-                <div className="w-10 h-10 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shrink-0">
-                  <Flame className="w-5 h-5 text-orange-400" />
+            <section className="relative overflow-hidden rounded-2xl bg-[#121212] px-6 py-8 sm:px-9 sm:py-10 text-white border border-orange-500/20">
+              <div aria-hidden="true" className="absolute -right-16 -top-24 h-80 w-80 rounded-full bg-orange-600/20 blur-3xl" />
+              <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-7">
+                <div className="max-w-xl">
+                  <span className="text-[10px] font-semibold tracking-[0.24em] uppercase text-orange-400">ShopGO / Seleção especial</span>
+                  <h3 className="mt-3 text-4xl sm:text-5xl font-black tracking-tight leading-none">BLACK <span className="text-orange-400">FRIDAY</span></h3>
+                  <p className="mt-4 text-sm text-slate-300 leading-relaxed">Produtos em destaque. Sua próxima campanha começa aqui.</p>
+                  <p className="mt-2 text-xs text-slate-400">Escolha um produto, prepare seu vídeo e divulgue com seu link de afiliado.</p>
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.2 rounded bg-orange-500/20 text-orange-300 border border-orange-500/30">
-                      Top 10 Shopee Brasil
-                    </span>
-                    <span className="text-xs text-slate-400">Atualizado Hoje</span>
-                  </div>
-                  <h3 className="text-sm sm:text-base font-semibold text-white mt-1">
-                    Curadoria Estratégica: Produtos Que Mais Vendem
-                  </h3>
-                  <p className="text-xs text-slate-300 mt-0.5 max-w-2xl leading-relaxed">
-                    Estes são os 10 produtos de maior tração comprovada, taxa de conversão acelerada e lucro por unidade garantido para você promover e faturar.
-                  </p>
+                <div className="flex flex-col gap-3 md:max-w-56">
+                  <div className="border-l-2 border-orange-400 pl-4"><strong className="text-3xl font-bold">{MINED_PRODUCTS.length}</strong><span className="block text-xs text-slate-400">produtos selecionados do catálogo</span></div>
+                  <button onClick={() => { setIsMiningMode(false); setSelectedNiche("Todos"); }} className="rounded-lg bg-white px-4 py-3 text-xs font-semibold text-slate-900 hover:bg-orange-50 transition-colors">Explorar catálogo completo →</button>
                 </div>
               </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={handleOpenMiningMode}
-                  className="px-3 py-1.5 rounded-lg bg-[#EE4D2D] hover:bg-[#E03A17] text-white text-xs font-medium transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Escanear Novamente</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setIsMiningMode(false);
-                    setSelectedNiche("Todos");
-                  }}
-                  className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/20 text-white text-xs font-medium transition-colors text-center cursor-pointer"
-                >
-                  Ver Catálogo Completo
-                </button>
-              </div>
-            </div>
+            </section>
           )}
 
           {/* Product Grid: 3 Products per row */}
@@ -343,7 +321,7 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
                     {/* Rank Badge */}
                     {product.rankBadge && (
                       <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded bg-slate-900/80 backdrop-blur-xs text-white font-mono-code font-semibold text-[10px]">
-                        {product.rankBadge}
+                        {isMiningMode ? "SELEÇÃO BLACK FRIDAY" : product.rankBadge}
                       </span>
                     )}
 

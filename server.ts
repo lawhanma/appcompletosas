@@ -1,3 +1,4 @@
+import { createBlackFridayVideo } from "./src/utils/blackFridayVideo";
 import express from "express";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
@@ -206,6 +207,10 @@ Retorne em formato JSON com o seguinte esquema:
         recordingFormat: recordingFormat,
         ...parsed 
       });
+    }
+
+    if (recordingFormat?.id === "black_friday") {
+      return res.json({ success: true, ...createBlackFridayVideo(productName), influencer: influencerConfig, recordingFormat });
     }
 
     // Default intelligent fallback scenes adapting to format and influencer

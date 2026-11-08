@@ -1,3 +1,4 @@
+import { createBlackFridayVideo } from "../utils/blackFridayVideo";
 import {AdDescriptionGenerator} from './AdDescriptionGenerator';
 import React, { useState, useEffect, useRef } from "react";
 import { apiFetch } from "../lib/apiFetch";
@@ -168,6 +169,13 @@ export const GerarVideosIAView: React.FC<GerarVideosIAViewProps> = ({
 
   // Keep video synchronized if product changes
   useEffect(() => {
+    setVideoGenerated(false);
+    setIsPlaying(false);
+    setFlowPromptResult(null);
+    if (selectedFormatId === "black_friday") {
+      setVideoData(createBlackFridayVideo(selectedProduct.name));
+      return;
+    }
     setVideoData({
       title: `Achadinho Viral: ${selectedProduct.name}`,
       hook: "NUNCA MAIS COMPRE CARO! 😱",
@@ -204,7 +212,7 @@ export const GerarVideosIAView: React.FC<GerarVideosIAViewProps> = ({
       caption: `Gente, corre antes que acabe o estoque do ${selectedProduct.name}! Link direto nos comentários! #achadinhos #shopee #promocao #review`,
       conversionScore: 97
     });
-  }, [selectedProduct]);
+  }, [selectedProduct, selectedFormatId]);
 
   // Scene timer loop when playing
   useEffect(() => {
@@ -250,6 +258,8 @@ export const GerarVideosIAView: React.FC<GerarVideosIAViewProps> = ({
   };
 
   const handleGenerateVideo = async () => {
+    if (isGenerating) return;
+    const startedAt = performance.now();
     setIsGenerating(true);
     setIsPlaying(false);
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
@@ -257,9 +267,10 @@ export const GerarVideosIAView: React.FC<GerarVideosIAViewProps> = ({
     }
     setGenerationStep(1);
 
+    const step2Timer = setTimeout(() => setGenerationStep(2), 6500);
+    const step3Timer = setTimeout(() => setGenerationStep(3), 13500);
+
     try {
-      setTimeout(() => setGenerationStep(2), 700);
-      setTimeout(() => setGenerationStep(3), 1400);
 
       const res = await apiFetch("/api/ai/generate-video-script", {
         method: "POST",
@@ -288,12 +299,15 @@ export const GerarVideosIAView: React.FC<GerarVideosIAViewProps> = ({
     } catch (e) {
       console.error(e);
     } finally {
-      setTimeout(() => {
-        setIsGenerating(false);
-        setVideoGenerated(true);
-        setCurrentSceneIndex(0);
-        setIsPlaying(true);
-      }, 2000);
+      // Keep the full presentation at least 20 seconds, including request time.
+      const remainingMs = Math.max(0, 20_000 - (performance.now() - startedAt));
+      await new Promise<void>(resolve => setTimeout(resolve, remainingMs));
+      clearTimeout(step2Timer);
+      clearTimeout(step3Timer);
+      setIsGenerating(false);
+      setVideoGenerated(true);
+      setCurrentSceneIndex(0);
+      setIsPlaying(true);
     }
   };
 
@@ -376,7 +390,7 @@ ${userGuidancePt}
 ${scenesPt}
 
 [PREÇO & CHAMADA PARA AÇÃO]
-Preço: De ${originalFormatted} por apenas ${priceFormatted}!
+Preço: ${selectedFormatId === "black_friday" ? "Confira o preço atualizado e as condições no link de afiliado. Não invente descontos ou urgência." : `De ${originalFormatted} por apenas ${priceFormatted}!`}
 Legenda Sugerida: ${videoData.caption || "Link direto com desconto nos comentários e na bio!"}
 
 [PARÂMETROS TÉCNICOS FLOW]
@@ -552,11 +566,15 @@ Legenda Sugerida: ${videoData.caption || "Link direto com desconto nos comentár
                 return (
                   <div
                     key={fmt.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isSelected}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedFormatId(fmt.id); } }}
                     onClick={() => setSelectedFormatId(fmt.id)}
                     className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all relative ${
                       isSelected
                         ? "border-[#FF5722] bg-[#FFF4F0] ring-2 ring-[#FF5722]/30 shadow-xs"
-                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/70"
+                        : fmt.id === "black_friday" ? "border-orange-300 bg-orange-50/60 hover:border-orange-500" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/70"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -575,6 +593,7 @@ Legenda Sugerida: ${videoData.caption || "Link direto com desconto nos comentár
                     </div>
 
                     <div className="font-black text-xs text-slate-900 flex items-center gap-1.5">
+                      {fmt.id === "black_friday" && <Flame className="w-3.5 h-3.5 text-[#FF5722]" />}
                       {fmt.id === "pov_maos" && <Hand className="w-3.5 h-3.5 text-[#FF5722]" />}
                       {fmt.id === "influencer_rosto" && <UserCheck className="w-3.5 h-3.5 text-[#FF5722]" />}
                       {fmt.id === "unboxing_mesa" && <PackageOpen className="w-3.5 h-3.5 text-[#FF5722]" />}
@@ -1003,7 +1022,7 @@ Legenda Sugerida: ${videoData.caption || "Link direto com desconto nos comentár
                 </span>
                 <span>Roteiro Detalhado & Direção de Cenas (IA)</span>
                 <span className="text-xs px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-md font-mono-code font-bold">
-                  Score {videoData.conversionScore}/100
+                  {selectedFormatId === "black_friday" ? "Especial Black Friday" : `Score ${videoData.conversionScore}/100`}
                 </span>
               </h3>
               <button
@@ -1601,7 +1620,7 @@ Legenda Sugerida: ${videoData.caption || "Link direto com desconto nos comentár
                   <h3 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
                     <span>Prévia do Vídeo: Veja como ficou seu vídeo</span>
                     <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">
-                      Score {videoData.conversionScore}/100
+                      {selectedFormatId === "black_friday" ? "Especial Black Friday" : `Score ${videoData.conversionScore}/100`}
                     </span>
                   </h3>
                   <p className="text-xs text-slate-400">

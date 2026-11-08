@@ -110,6 +110,16 @@ export const AGE_RANGE_OPTIONS = [
 
 export const RECORDING_FORMAT_OPTIONS: RecordingFormatOption[] = [
   {
+    id: "black_friday",
+    title: "Black Friday — Vitrine de Ofertas",
+    simplifiedLabel: "Produto em destaque + convite para conferir a oferta",
+    badge: "BLACK FRIDAY / Edição especial",
+    description: "Fundo preto, luz de recorte laranja e cortes rápidos mostrando detalhes do produto. Gancho de Black Friday, demonstração e convite para conferir as condições no link. Não invente descontos, estoque, vendas, cupons ou frete grátis.",
+    bestFor: "Campanhas de Black Friday em Reels, TikTok e Shorts",
+    cameraPrompt: "Black Friday editorial product commercial, matte black backdrop, orange rim lighting, macro product details and smooth push-in shots, bold clean Black Friday typography, vertical 9:16. Narration in Brazilian Portuguese with a Black Friday opening and a CTA to check the affiliate link. Never invent discounts, scarcity, sales counts or free shipping.",
+    iconName: "Sparkles",
+  },
+  {
     id: "pov_maos",
     title: "Visão em 1ª Pessoa (POV)",
     simplifiedLabel: "Mostrando com as Mãos (Estilo POV)",

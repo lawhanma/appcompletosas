@@ -79,7 +79,8 @@ export type RecordingFormatId =
   | "influencer_rosto" 
   | "unboxing_mesa" 
   | "uso_real" 
-  | "comercial_360";
+  | "comercial_360"
+  | "black_friday";
 
 export interface RecordingFormatOption {
   id: RecordingFormatId;
