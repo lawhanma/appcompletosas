@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { Product, NavTab } from "../types";
 import { SUPPLIERS, PRODUCTS, MINED_PRODUCTS } from "../data/mockData";
 import { ProductMetricsModal } from "./ProductMetricsModal";
@@ -60,15 +60,15 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
   // Activate Mining mode with live scanner animation
   const handleOpenMiningMode = () => {
     setSearchQuery("");
-    handleCompleteMining();
+    setIsMiningScanning(true);
   };
 
-  const handleCompleteMining = () => {
+  const handleCompleteMining = useCallback(() => {
     setIsMiningScanning(false);
     setIsMiningMode(true);
-    setSelectedNiche("Mineração");
+    setSelectedNiche("Black Friday");
     window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  }, []);
 
   // Filter products by selected supplier/niche or mining mode and search query
   const activeProductList = isMiningMode ? MINED_PRODUCTS : PRODUCTS;
@@ -112,7 +112,7 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
               <Flame className="w-3.5 h-3.5 text-orange-400" />
               <span>Black Friday</span>
               <span className="bg-white/20 text-white text-[10px] font-mono-code font-semibold px-1.5 py-0.2 rounded">
-                TOP 10
+                TOP {MINED_PRODUCTS.length}
               </span>
             </button>
           </div>
@@ -263,7 +263,7 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
                 <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold ${
                   isMiningMode ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
                 }`}>
-                  TOP 10
+                  TOP {MINED_PRODUCTS.length}
                 </span>
               </button>
 
@@ -321,7 +321,7 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
                     {/* Rank Badge */}
                     {product.rankBadge && (
                       <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded bg-slate-900/80 backdrop-blur-xs text-white font-mono-code font-semibold text-[10px]">
-                        {isMiningMode ? "SELEÇÃO BLACK FRIDAY" : product.rankBadge}
+                        {product.rankBadge}
                       </span>
                     )}
 

@@ -20,12 +20,12 @@ interface MiningAnimationModalProps {
 }
 
 const PHASES = [
-  { at: 12, label: "Conectando ao banco de dados Shopee Brasil & TikTok Shop..." },
-  { at: 28, label: "Rastreando mais de 14.800 produtos com pico de tráfego e pedidos..." },
-  { at: 48, label: "Calculando margem líquida, comissão direta e taxa de conversão > 3.8%..." },
-  { at: 72, label: "Filtrando itens com entrega rápida no Brasil e estoque garantido..." },
-  { at: 90, label: "Aplicando algoritmo preditivo de viralização e tração imediata..." },
-  { at: 100, label: "Mineração finalizada! TOP 10 Produtos Prontos para Vender." }
+  { at: 12, label: "Abrindo a seleção especial Black Friday..." },
+  { at: 28, label: "Organizando os produtos do catálogo..." },
+  { at: 48, label: "Preparando fotos e detalhes dos produtos..." },
+  { at: 72, label: "Montando sua vitrine de Black Friday..." },
+  { at: 90, label: "Finalizando a apresentação da seleção..." },
+  { at: 100, label: `Seleção pronta! ${MINED_PRODUCTS.length} produtos para explorar.` }
 ];
 
 export const MiningAnimationModal: React.FC<MiningAnimationModalProps> = ({
@@ -53,7 +53,8 @@ export const MiningAnimationModal: React.FC<MiningAnimationModalProps> = ({
 
     // Progress counter
     const startTime = Date.now();
-    const duration = 2800; // 2.8 seconds total
+    const duration = 6000; // Reveal the selection over six seconds.
+    let completionTimer: ReturnType<typeof setTimeout> | undefined;
 
     const progressInterval = setInterval(() => {
       const elapsed = Date.now() - startTime;
@@ -77,7 +78,7 @@ export const MiningAnimationModal: React.FC<MiningAnimationModalProps> = ({
         clearInterval(radarInterval);
         
         // Short pause at 100% then finish
-        setTimeout(() => {
+        completionTimer = setTimeout(() => {
           onComplete();
         }, 600);
       }
@@ -86,6 +87,7 @@ export const MiningAnimationModal: React.FC<MiningAnimationModalProps> = ({
     return () => {
       clearInterval(radarInterval);
       clearInterval(progressInterval);
+      clearTimeout(completionTimer);
     };
   }, [isOpen, onComplete]);
 
@@ -106,7 +108,7 @@ export const MiningAnimationModal: React.FC<MiningAnimationModalProps> = ({
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500"></span>
             </span>
             <span className="text-[11px] font-mono-code font-bold uppercase tracking-widest text-orange-400">
-              RADAR SHOP GO • ESCANEANDO MERCADO
+              SHOPGO • SELEÇÃO BLACK FRIDAY
             </span>
           </div>
 
@@ -155,7 +157,12 @@ export const MiningAnimationModal: React.FC<MiningAnimationModalProps> = ({
                 { top: "58%", left: "42%" },
                 { top: "78%", left: "55%" },
                 { top: "40%", left: "80%" },
-                { top: "52%", left: "62%" }
+                { top: "52%", left: "62%" },
+                { top: "18%", left: "40%" },
+                { top: "80%", left: "40%" },
+                { top: "60%", left: "20%" },
+                { top: "22%", left: "72%" },
+                { top: "63%", left: "82%" }
               ];
               const pos = positions[idx % positions.length];
 
@@ -203,10 +210,10 @@ export const MiningAnimationModal: React.FC<MiningAnimationModalProps> = ({
           <div className="flex items-center justify-between mb-2 text-xs font-semibold text-slate-400">
             <span className="flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>Itens com Pico de Vendas Detectados:</span>
+              <span>Produtos da seleção:</span>
             </span>
             <span className="font-mono-code text-orange-400 font-bold">
-              {discoveredProducts.length}/10 produtos
+              {discoveredProducts.length}/{MINED_PRODUCTS.length} produtos
             </span>
           </div>
 
@@ -214,7 +221,7 @@ export const MiningAnimationModal: React.FC<MiningAnimationModalProps> = ({
           <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
             {discoveredProducts.length === 0 ? (
               <div className="text-xs text-slate-500 py-1 italic">
-                Aguardando localização dos primeiros itens...
+                Preparando os primeiros produtos...
               </div>
             ) : (
               discoveredProducts.slice(-4).reverse().map((prod) => (
@@ -250,7 +257,7 @@ export const MiningAnimationModal: React.FC<MiningAnimationModalProps> = ({
               className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 animate-in zoom-in-95 cursor-pointer"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Ver Top 10 Produtos Minerados</span>
+              <span>Ver os {MINED_PRODUCTS.length} produtos Black Friday</span>
             </button>
           </div>
         )}

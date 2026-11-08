@@ -110,10 +110,10 @@ export const PRODUCTS: Product[] = RAW_ALL_PRODUCTS.map((p) => ({
   shopeeUrl: getWorkingShopeeUrl(p)
 }));
 
-// Curated selection from the existing catalog; body splash stays at position 2.
+// Black Friday selection from the existing catalog; body splash leads the list.
 export const MINED_PRODUCTS: Product[] = [
-  PRODUCTS_ELETRONICOS[1],
   PRODUCTS_COSMETICOS[0],
+  PRODUCTS_ELETRONICOS[1],
   PRODUCTS_COZINHA[2],
   PRODUCTS_BRINQUEDOS[4],
   PRODUCTS_ELETRONICOS[5],
@@ -122,10 +122,15 @@ export const MINED_PRODUCTS: Product[] = [
   PRODUCTS_COZINHA[7],
   PRODUCTS_SAZONAIS[1],
   PRODUCTS_BRINQUEDOS[0],
+  PRODUCTS_COZINHA[15],
+  PRODUCTS_ELETRONICOS[0],
+  PRODUCTS_COSMETICOS[1],
+  PRODUCTS_COZINHA[3],
+  PRODUCTS_ELETRONICOS[3],
 ].map((product, index) => ({
   ...product,
   shopeeUrl: getWorkingShopeeUrl(product),
-  rankBadge: `#${index + 1} TOP 10`,
+  rankBadge: `#${index + 1} BLACK FRIDAY`,
 }));
 
 export const NICHES = [
