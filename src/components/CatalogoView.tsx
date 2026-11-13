@@ -1,3 +1,6 @@
+import {useCloudAccount} from "../context/CloudAccount";
+import {UpgradePlanModal} from "./UpgradePlanModal";
+import {LockKeyhole} from "lucide-react";
 import React, { useState, useCallback } from "react";
 import { Product, NavTab } from "../types";
 import { SUPPLIERS, PRODUCTS, MINED_PRODUCTS } from "../data/mockData";
@@ -25,6 +28,10 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
   onNavigateTab,
   selectedSupplierId: initialSupplierId = null
 }) => {
+  const account=useCloudAccount();
+  const isFree=account?.membership.plan==='free';
+  const [upgrade,setUpgrade]=useState(false);
+  const freeCategory='Utilidades';
   const [selectedNiche, setSelectedNiche] = useState<string | null>(
     initialSupplierId 
       ? SUPPLIERS.find(s => s.id === initialSupplierId)?.category || null 
@@ -43,6 +50,7 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
 
   const handleToggleRegistration = (supplierId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if(isFree){setUpgrade(true);return;}
     setRegisteredSupplierIds(prev => 
       prev.includes(supplierId) 
         ? prev.filter(id => id !== supplierId) 
@@ -52,6 +60,7 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
 
   // Open the catalog for a specific supplier / niche
   const handleOpenNicheCatalog = (category: string) => {
+    if(isFree && category!==freeCategory){setUpgrade(true);return;}
     setIsMiningMode(false);
     setSelectedNiche(category);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -59,6 +68,7 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
 
   // Activate Mining mode with live scanner animation
   const handleOpenMiningMode = () => {
+    if(isFree){setUpgrade(true);return;}
     setSearchQuery("");
     setIsMiningScanning(true);
   };
@@ -85,11 +95,13 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
       p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.tag.toLowerCase().includes(searchQuery.toLowerCase());
 
-    return matchesNiche && matchesSearch;
+    return matchesNiche && matchesSearch && (!isFree || p.category===freeCategory);
   });
 
   return (
     <div className="space-y-6">
+      {upgrade&&<UpgradePlanModal onClose={()=>setUpgrade(false)}/>}
+      {isFree&&<div className="rounded-2xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-900"><strong>Plano gratuito</strong><p className="mt-1 text-xs">Comece com a seleção de Utilidades. Desbloqueie mais fornecedores quando quiser.</p></div>}
       {/* MODE 1: SUPPLIER / NICHE LIST */}
       {!selectedNiche ? (
         <div className="space-y-5">
@@ -124,7 +136,8 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
           {/* Supplier Cards List */}
           <div className="space-y-3">
             {SUPPLIERS.map((supplier) => {
-              const isCadastrado = registeredSupplierIds.includes(supplier.id);
+              const locked=isFree&&supplier.category!==freeCategory;
+              const isCadastrado = !locked&&registeredSupplierIds.includes(supplier.id);
 
               return (
                 <div
@@ -152,7 +165,7 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
                       {/* Supplier Name and Cadastrado Pill */}
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="font-display text-sm sm:text-base font-semibold text-slate-900 group-hover:text-[#EE4D2D] transition-colors leading-tight">
-                          {supplier.name}
+                          {isFree && supplier.category===freeCategory?'Seleção ShopGO · Gratuito':supplier.name}{isFree&&supplier.category!==freeCategory&&<LockKeyhole className="inline ml-2 h-4 w-4 text-slate-400"/>}
                         </h3>
 
                         {isCadastrado ? (
@@ -169,7 +182,7 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
                             onClick={(e) => handleToggleRegistration(supplier.id, e)}
                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-medium text-[10px] hover:bg-slate-200 transition-colors"
                           >
-                            + SOLICITAR CADASTRO
+                            {locked?'BLOQUEADO':'+ SOLICITAR CADASTRO'}
                           </button>
                         )}
                       </div>
@@ -197,7 +210,7 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
                       className="w-full sm:w-auto px-4 py-2 rounded-lg text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer bg-[#EE4D2D] hover:bg-[#E03A17] shadow-xs"
                     >
                       <Box className="w-3.5 h-3.5" />
-                      <span>Catálogo</span>
+                      <span>{locked?'Ver planos':'Catálogo'}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>

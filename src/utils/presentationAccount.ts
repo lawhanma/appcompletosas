@@ -3,4 +3,4 @@ export const isPresentationAccount = (email?: string) =>
   email?.trim().toLowerCase() === 'isaquelaw@gmail.com';
 
 export const getPresentationCode = (plan: string, email?: string) =>
-  plan === 'vip' || isPresentationAccount(email) ? '123456' : '101190';
+  plan === 'vip' || isPresentationAccount(email) ? '123456' : plan === 'free' ? 'free' : '101190';

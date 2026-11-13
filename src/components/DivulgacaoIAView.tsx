@@ -1,3 +1,4 @@
+import {useCloudAccount} from "../context/CloudAccount";
 import {illustrativeReach} from '../utils/estimatedReach';
 import {usePromotionCampaign} from '../hooks/usePromotionCampaign';
 import {PromotionCampaignCard} from './PromotionCampaignCard';
@@ -38,6 +39,8 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
   onOpenVideoCreator,
   defaultSubTab = "automatica"
 }) => {
+  const freePlan=useCloudAccount()?.membership.plan==='free';
+  const availableProducts=freePlan?PRODUCTS.filter(p=>p.category==='Utilidades'):PRODUCTS;
   const { state, userCode, isVip, hasUnlimitedAiCredits, addCommission, consumeAiCredit } = useFinancial();
   const [renewalOpen, setRenewalOpen] = useState(false);
   const profilePicker=useCampaignProfile();
@@ -56,7 +59,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
   
   // Selected product
   const [selectedProduct, setSelectedProduct] = useState<Product>(
-    initialProduct || PRODUCTS.find(p => p.name.includes("Fone Bluetooth")) || PRODUCTS[0]
+    (initialProduct&&(!freePlan||initialProduct.category==='Utilidades')?initialProduct:null) || availableProducts.find(p => p.name.includes("Fone Bluetooth")) || availableProducts[0]
   );
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -108,7 +111,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
     "Brinquedos"
   ];
 
-  const filteredProducts = PRODUCTS.filter((p) => {
+  const filteredProducts = availableProducts.filter((p) => {
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = 
       categoryFilter === "Todos" || 
@@ -585,13 +588,13 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="p-3.5 bg-orange-50/50 border border-orange-200/70 rounded-lg">
                     <span className="text-[10px] font-medium text-slate-500 uppercase">
-                      {promotion.enabled?'Comissão promocional':'Comissão Gerada'}
+                      {promotion.enabled?'Comissão gerada':'Comissão Gerada'}
                     </span>
                     <div className="text-xl font-mono-code font-bold text-[#EE4D2D] mt-1">
                       R$ {(promotion.enabled?(promotion.award?.amount_cents||0)/100:campaignResult.commissionAmount).toFixed(2).replace(".", ",")}
                     </div>
                     <span className="text-[10px] text-emerald-700 font-medium">
-                      {promotion.enabled?'Liberação após 8 dias':'Creditada no Financeiro'}
+                      {promotion.enabled?'Liberação imediata':'Creditada no Financeiro'}
                     </span>
                   </div>
 
@@ -638,7 +641,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
                   <button type="button" onClick={async()=>{try {await navigator.clipboard.writeText(campaignResult.copyText);setToastMessage('Texto da campanha copiado!');setTimeout(()=>setToastMessage(null),3000);} catch {setToastMessage('Selecione o texto acima para copiar.');}}} className="text-xs font-semibold text-[#EE4D2D]">Copiar texto da campanha</button>
                 </div>
 
-                {promotion.enabled?<p className="text-xs text-slate-600">A comissão promocional é registrada como pendente no financeiro e liberada após 8 dias. Não representa uma venda.</p>:campaignResult.commissionAmount <= 0 && !(userCode === "123456" || userCode === "12456") ? (
+                {promotion.enabled?<p className="text-xs text-slate-600">A comissão por divulgação é registrada no financeiro e liberada imediatamente. Não representa uma venda.</p>:campaignResult.commissionAmount <= 0 && !(userCode === "123456" || userCode === "12456") ? (
                   <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200/80 text-slate-700 text-xs flex items-center justify-between">
                     <span>
                       ℹ️ <strong>Divulgação Concluída:</strong> Anúncios e links de afiliado ativos nas 6 redes sociais gerando tráfego orgânico e alcance!

@@ -6,7 +6,7 @@ import {AuthScreen} from '../components/AuthScreen';
 import {getPresentationCode} from '../utils/presentationAccount';
 
 export interface CloudProfile { id: string; full_name: string; phone: string; pix_key: string }
-interface Membership { plan: 'standard' | 'vip'; active: boolean }
+interface Membership { plan: 'free' | 'standard' | 'vip'; active: boolean }
 interface Account { unlimitedAiCredits: boolean; profile: CloudProfile; membership: Membership; updateProfile: (value: CloudProfile) => void; signOut: () => Promise<void> }
 const AccountContext = createContext<Account | null>(null);
 export const useCloudAccount = () => useContext(AccountContext);

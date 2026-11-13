@@ -14,7 +14,7 @@ export const WhatsAppFloatingButton: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-5 right-5 z-40">
+    <div className="fixed bottom-24 md:bottom-5 right-4 md:right-5 z-20">
       {isOpen && (
         <div className="absolute bottom-14 right-0 w-76 bg-white rounded-xl shadow-xl border border-slate-200/90 overflow-hidden mb-2 animate-in fade-in slide-in-from-bottom-2 duration-150">
           <div className="bg-[#25D366] text-white p-3.5 flex items-center justify-between">

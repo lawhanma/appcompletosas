@@ -1,25 +1,25 @@
 import {PromotionRewardsProvider} from './context/PromotionRewards';
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import { NavTab, Product } from "./types";
 import { FinancialProvider, useFinancial } from "./context/FinancialContext";
 import {DailyMissionsProvider} from './context/DailyMissions';
-import {DailyMissionsView} from './components/DailyMissionsView';
-import {MeusPerfisView} from "./components/MeusPerfisView";
+const DailyMissionsView=lazy(()=>import("./components/DailyMissionsView").then(m=>({default:m.DailyMissionsView})));
+const MeusPerfisView=lazy(()=>import("./components/MeusPerfisView").then(m=>({default:m.MeusPerfisView})));
 import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
-import { CatalogoView } from "./components/CatalogoView";
-import { DivulgacaoIAView } from "./components/DivulgacaoIAView";
-import { GerarVideosIAView } from "./components/GerarVideosIAView";
-import { DashboardView } from "./components/DashboardView";
-import { FinanceiroView } from "./components/FinanceiroView";
-import { ConexoesView } from "./components/ConexoesView";
-import { PerfilView } from "./components/PerfilView";
+const CatalogoView=lazy(()=>import("./components/CatalogoView").then(m=>({default:m.CatalogoView})));
+const DivulgacaoIAView=lazy(()=>import("./components/DivulgacaoIAView").then(m=>({default:m.DivulgacaoIAView})));
+const GerarVideosIAView=lazy(()=>import("./components/GerarVideosIAView").then(m=>({default:m.GerarVideosIAView})));
+const DashboardView=lazy(()=>import("./components/DashboardView").then(m=>({default:m.DashboardView})));
+const FinanceiroView=lazy(()=>import("./components/FinanceiroView").then(m=>({default:m.FinanceiroView})));
+const ConexoesView=lazy(()=>import("./components/ConexoesView").then(m=>({default:m.ConexoesView})));
+const PerfilView=lazy(()=>import("./components/PerfilView").then(m=>({default:m.PerfilView})));
 import { AuthScreen } from "./components/AuthScreen";
 import { WhatsAppFloatingButton } from "./components/WhatsAppFloatingButton";
 import { internalDb } from "./utils/internalDb";
 import { supabase } from "./lib/supabase";
 import { CloudAccountGate, useCloudAccount } from "./context/CloudAccount";
-import { DollarSign, CheckCircle2, X } from "lucide-react";
+import { DollarSign, CheckCircle2, X, House, Package, Sparkles, Wallet, Menu } from "lucide-react";
 
 function AppContent() {
   const cloudAccount = useCloudAccount();
@@ -31,6 +31,8 @@ function AppContent() {
   });
   const [activeTab, setActiveTab] = useState<NavTab>("dashboard");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenu,setMobileMenu]=useState(false);
+  const toggleSidebar=()=>{if(window.matchMedia('(max-width: 767px)').matches)setMobileMenu(v=>!v);else setSidebarCollapsed(v=>!v);};
   const [contextProduct, setContextProduct] = useState<Product | null>(null);
   const [divulgacaoSubTab, setDivulgacaoSubTab] = useState<"automatica" | "grupos" | "tiktok">("automatica");
   const { lastSaleNotification, clearNotification, setUserEmail, setUserCode } = useFinancial();
@@ -103,7 +105,7 @@ function AppContent() {
   }
 
   return (
-    <div className="flex h-screen bg-[#F8FAFC] overflow-hidden text-slate-800 relative">
+    <div className="shopgo-app flex h-dvh bg-[#F8FAFC] overflow-hidden text-slate-800 relative">
       {/* Real-time sale toast alert */}
       {lastSaleNotification && (
         <div className="fixed top-4 right-4 z-50 max-w-sm bg-white text-slate-800 p-3.5 rounded-xl shadow-lg border border-slate-200/80 animate-in slide-in-from-top-3 flex items-start gap-3">
@@ -139,14 +141,16 @@ function AppContent() {
       )}
 
       {/* Sidebar Navigation */}
+      {mobileMenu&&<button aria-label="Fechar menu" onClick={()=>setMobileMenu(false)} className="fixed inset-0 z-30 bg-slate-950/45 backdrop-blur-sm md:hidden"/>}
+      <div className={`shopgo-sidebar ${mobileMenu?"mobile-open":""}`}>
       <Sidebar
         activeTab={activeTab}
         onSelectTab={(tab) => {
-          setActiveTab(tab);
+          setActiveTab(tab);setMobileMenu(false);
           window.scrollTo({ top: 0, behavior: "smooth" });
         }}
         collapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        onToggleCollapse={toggleSidebar}
         onLogout={async () => {
           if (cloudAccount) { await cloudAccount.signOut(); return; }
           internalDb.clearSession();
@@ -154,18 +158,19 @@ function AppContent() {
         }}
       />
 
+      </div>
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {/* Top Header */}
         <Header
-          onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+          onToggleSidebar={toggleSidebar}
           collapsed={sidebarCollapsed}
           onOpenVideoCreator={() => handleOpenVideoCreator()}
         />
 
         {/* Dynamic View Scrollable Container */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto pb-16">
+          <div className="max-w-7xl mx-auto pb-16"><Suspense fallback={<div role="status" className="space-y-4 animate-pulse"><div className="h-8 w-40 rounded-lg bg-slate-200"/><div className="h-48 rounded-2xl bg-white border border-slate-200"/><span className="sr-only">Carregando tela…</span></div>}>
             {activeTab === "perfis" && <MeusPerfisView />}
             {activeTab === 'missoes' && <DailyMissionsView onNavigate={(tab,sub)=>handleNavigateTab(tab,undefined,sub)} />}
             {activeTab === "catalogo" && (
@@ -195,10 +200,11 @@ function AppContent() {
             )}
 
             {activeTab === "perfil" && <PerfilView />}
-          </div>
+          </Suspense></div>
         </main>
       </div>
 
+      <nav aria-label="Navegação principal" className="mobile-bottom-nav md:hidden">{([{id:'dashboard',label:'Início',icon:<House size={21}/>},{id:'catalogo',label:'Catálogo',icon:<Package size={21}/>},{id:'divulgacao',label:'Divulgar',icon:<Sparkles size={21}/>},{id:'financeiro',label:'Saldo',icon:<Wallet size={21}/>}] as const).map(item=><button key={item.id} aria-current={activeTab===item.id?'page':undefined} onClick={()=>{setActiveTab(item.id);setMobileMenu(false);}} className={activeTab===item.id?'active':''}><span aria-hidden="true">{item.icon}</span>{item.label}</button>)}<button onClick={()=>setMobileMenu(v=>!v)} aria-expanded={mobileMenu}><span aria-hidden="true"><Menu size={21}/></span>Mais</button></nav>
       {/* Floating WhatsApp Customer Support Button */}
       <WhatsAppFloatingButton />
     </div>

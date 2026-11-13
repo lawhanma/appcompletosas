@@ -21,7 +21,7 @@ import {
 
 export const FinanceiroView:React.FC=()=>{
  const rewards=usePromotionRewards(),account=useCloudAccount();
- if(account?.membership.plan==='standard'&&rewards){
+ if((account?.membership.plan==='standard'||account?.membership.plan==='free')&&rewards){
   if(rewards.loading)return <p role="status" className="p-6 text-sm text-slate-500">Carregando financeiro…</p>;
   if(rewards.error)return <div role="alert" className="p-6 text-sm text-rose-700">{rewards.error}<button onClick={()=>{void rewards.reload();}} className="ml-2 underline">Tentar novamente</button></div>;
   if(rewards.wallet.enabled)return <PromotionFinancialPanel/>;
@@ -29,7 +29,8 @@ export const FinanceiroView:React.FC=()=>{
  return <LegacyFinanceiroView/>;
 };
 const LegacyFinanceiroView: React.FC = () => {
-  const { state, requestWithdrawal: _requestWithdrawal, releaseDeliveredSale } = useFinancial();
+  const { state, releaseDeliveredSale } = useFinancial();
+  const rewards=usePromotionRewards();
   const [withdrawAmount, setWithdrawAmount] = useState<string>("");
   const [keyType, setKeyType] = useState<string>("CPF");
   const [pixKey, setPixKey] = useState<string>(() => {
@@ -55,23 +56,18 @@ const LegacyFinanceiroView: React.FC = () => {
     e.preventDefault();
     const amountNum = parseFloat(withdrawAmount.replace("R$", "").replace(/\./g, "").replace(",", ".").trim()) || 0;
     
-    if (amountNum <= 0) {
-      setShowAntecipationModal(true);
-      return;
+    if (amountNum < 150 || amountNum > state.saldoDisponivel || pixKey.trim().length < 3) {
+      setSuccessMessage('Informe um valor a partir de R$ 150, dentro do saldo disponível, e uma chave Pix válida.');return;
     }
-    
-    if (amountNum > state.saldoDisponivel) {
-      if (amountNum <= (state.saldoDisponivel + state.saldoPendente)) {
-        alert(
-          `Atenção: Parte desse valor está no seu Saldo Pendente a Receber (R$ ${state.saldoPendente.toFixed(2).replace(".", ",")}).\n\nAssim que o produto for recebido pelo cliente, o valor será liberado automaticamente para saque!`
-        );
-        return;
-      }
-      alert("Valor solicitado é maior que o saldo disponível em conta.");
-      return;
-    }
-    
-    setShowAntecipationModal(true);
+    if(isProcessing)return;
+    setIsProcessing(true);
+    try {
+      if(!rewards)throw new Error('Entre na sua conta para solicitar o saque.');
+      await rewards.withdraw(crypto.randomUUID(),Math.round(amountNum*100),pixKey.trim());
+      setSuccessMessage('Solicitação registrada. A equipe ShopGO fará o pagamento após conferir o saldo.');setWithdrawAmount('');
+    } catch(e) {setSuccessMessage((e as Error).message);}
+    finally {setIsProcessing(false);}
+
   };
 
   const filteredTransactions = state.transactions.filter(tx => {
@@ -286,17 +282,7 @@ const LegacyFinanceiroView: React.FC = () => {
           </div>
         </div>
 
-        {/* Alert Banner: 30 days lock */}
-        <div className="p-3.5 rounded-lg bg-amber-50/80 border border-amber-200/70 flex items-start gap-2.5 text-xs text-amber-900">
-          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-          <div className="space-y-0.5 leading-relaxed">
-            <span className="font-semibold text-amber-950">Saque Indisponível:</span>{" "}
-            <span>Você poderá solicitar o saque após 30 dias utilizando a plataforma. Faltam <strong>30 dias</strong> para liberar seus saques.</span>
-            <div className="text-[11px] text-amber-800 mt-0.5">
-              Consulte as condições de antecipação para comissões promocionais pendentes.
-            </div>
-          </div>
-        </div>
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">Saque mínimo de <strong>R$ 150</strong>, sem prazo de espera. A solicitação é conferida e paga pela equipe ShopGO.</div>
 
         {/* Form Fields */}
         <form onSubmit={handleWithdrawClick} className="space-y-4 pt-1">
@@ -370,21 +356,14 @@ const LegacyFinanceiroView: React.FC = () => {
           {/* Buttons */}
           <div className="pt-2 flex flex-col sm:flex-row items-center gap-2.5">
             <button
-              type="submit"
+              type="submit" disabled={isProcessing || state.saldoDisponivel<150}
               className="w-full sm:w-auto px-4 py-2 bg-[#EE4D2D] hover:bg-[#E03A17] text-white font-medium text-xs rounded-lg shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
             >
               <Wallet className="w-3.5 h-3.5" />
-              <span>Solicitar Saque via PIX</span>
+              <span>{isProcessing?'Registrando…':'Solicitar Saque via PIX'}</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => setShowAntecipationModal(true)}
-              className="w-full sm:w-auto px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium text-xs rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-            >
-              <Zap className="w-3.5 h-3.5 text-amber-600" />
-              <span>Consultar antecipação</span>
-            </button>
+
           </div>
         </form>
       </div>

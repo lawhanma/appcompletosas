@@ -1,0 +1,14 @@
+import {build} from 'esbuild';
+import assert from 'node:assert/strict';
+import {pathToFileURL} from 'node:url';
+import path from 'node:path';
+const outfile=path.resolve('node_modules/.cache/shopgo-free-plan-check.mjs');
+await build({stdin:{contents:`import React from 'react';import {renderToStaticMarkup} from 'react-dom/server';import {CatalogoView} from './src/components/CatalogoView';import {UpgradePlanModal} from './src/components/UpgradePlanModal';export const catalog=()=>renderToStaticMarkup(<CatalogoView onNavigateTab={()=>{}}/>);export const plans=()=>renderToStaticMarkup(<UpgradePlanModal onClose={()=>{}}/>);`,resolveDir:process.cwd(),loader:'tsx'},outfile,bundle:true,platform:'node',format:'esm',packages:'external',define:{'import.meta.env':'{}'},plugins:[{name:'fixture-account',setup(b){b.onResolve({filter:/[/\\]CloudAccount$/},()=>({path:'account',namespace:'fixture'}));b.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:'export const useCloudAccount=()=>globalThis.qaAccount; export const CloudAccountGate=({children})=>children;',loader:'js'}));}}]});
+globalThis.localStorage={getItem:()=>null,setItem:()=>{},removeItem:()=>{}};
+const view=await import(pathToFileURL(outfile));
+globalThis.qaAccount={membership:{plan:'free',active:true},profile:{id:'qa'}};
+const free=view.catalog();assert.match(free,/Seleção ShopGO · Gratuito/);assert.equal((free.match(/BLOQUEADO/g)||[]).length,6);assert.equal((free.match(/>Ver planos</g)||[]).length,6);
+globalThis.qaAccount={membership:{plan:'standard',active:true},profile:{id:'qa'}};
+assert.doesNotMatch(view.catalog(),/BLOQUEADO|Seleção ShopGO · Gratuito/);
+const plans=view.plans();assert.match(plans,/https:\/\/go.ironpayapp.com.br\/tm3czoy3gd/);assert.match(plans,/https:\/\/go.ironpayapp.com.br\/cmncr21xjh/);
+console.log('PASS: one free supplier, six locked suppliers, paid catalog preserved and both checkout links. No account or payment created.');

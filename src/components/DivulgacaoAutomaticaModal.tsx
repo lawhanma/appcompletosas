@@ -356,7 +356,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
       `💰 Preço: R$ ${product.price.toFixed(2).replace(".", ",")}\n` +
       `🔥 Vendas Realizadas: ${totalSales} vendas\n` +
       `💵 Faturamento Total: R$ ${totalRevenue.toFixed(2).replace(".", ",")}\n` +
-      `💎 ${promotion.enabled?'Comissão promocional ShopGO (liberação após 8 dias)':'Sua Comissão Líquida (PIX)'}: R$ ${totalCommission.toFixed(2).replace(".", ",")}\n` +
+      `💎 ${promotion.enabled?'Comissão promocional ShopGO (liberação imediata)':'Sua Comissão Líquida (PIX)'}: R$ ${totalCommission.toFixed(2).replace(".", ",")}\n` +
       `👥 ${promotion.enabled?'Alcance estimado (ilustrativo, não medido)':'Pessoas Alcançadas'}: ${totalReach.toLocaleString("pt-BR")} visualizações\n\n` +
       `📊 Desempenho por Rede Social:\n` +
       platforms.map(p => `• ${p.name}: ${p.salesCount} vendas (${p.views.toLocaleString("pt-BR")} ${promotion.enabled?'views estimadas, não medidas':'views'})`).join("\n") +
@@ -706,7 +706,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
                 </h3>
 
                 <p className="text-xs sm:text-sm text-emerald-100 max-w-xl mx-auto">
-                  {promotion.enabled?'Atividade concluída no ShopGO. A comissão promocional fica pendente por 8 dias; confira o registro no financeiro.':'A inteligência artificial distribuiu os vídeos e copies nos melhores horários, gerando conversões instantâneas na sua conta de afiliado.'}
+                  {promotion.enabled?'Atividade concluída no ShopGO. A comissão por divulgação é liberada imediatamente; confira o registro no financeiro.':'A inteligência artificial distribuiu os vídeos e copies nos melhores horários, gerando conversões instantâneas na sua conta de afiliado.'}
                 </p>
 
                 {/* 4 Main Numbers Highlight Cards */}
@@ -726,11 +726,11 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
                   </div>
 
                   <div className="p-3 bg-white/25 backdrop-blur-md rounded-2xl border border-white/40 text-center shadow-lg">
-                    <span className="text-[10px] text-amber-200 uppercase font-black block">{promotion.enabled?'Comissão promocional':'Sua Comissão Pix'}</span>
+                    <span className="text-[10px] text-amber-200 uppercase font-black block">{promotion.enabled?'Comissão gerada':'Sua Comissão Pix'}</span>
                     <span className="text-2xl font-black text-amber-300">
                       R$ {totalCommission.toFixed(2).replace(".", ",")}
                     </span>
-                    <span className="text-[9px] text-white/90 block font-bold">{promotion.enabled?'Liberação após 8 dias':'100% líquido p/ saque'}</span>
+                    <span className="text-[9px] text-white/90 block font-bold">{promotion.enabled?'Liberação imediata':'100% líquido p/ saque'}</span>
                   </div>
 
                   <div className="p-3 bg-white/15 backdrop-blur-md rounded-2xl border border-white/20 text-center">

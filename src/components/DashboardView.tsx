@@ -301,7 +301,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
                 {formatCurrency(available)}
               </span>
             </div>
-            <div className="flex items-center justify-between" title={promotional?'Liberação após 8 dias da divulgação':'Liberado automaticamente assim que o produto for entregue ao cliente'}>
+            <div className="flex items-center justify-between" title={promotional?'Liberação imediata da divulgação':'Liberado automaticamente assim que o produto for entregue ao cliente'}>
               <span className="text-slate-600 flex items-center gap-1 text-[11px]">
                 <Clock className="w-3 h-3 text-amber-600 shrink-0" />
                 Pendente a receber:

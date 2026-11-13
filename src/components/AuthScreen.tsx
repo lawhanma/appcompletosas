@@ -22,6 +22,7 @@ interface AuthScreenProps {
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [freeSignup, setFreeSignup] = useState(true);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState(() => {
     if (supabase) return '';
@@ -69,7 +70,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     setNotice("");
     setAlreadyRegistered(false);
     if (supabase) {
-      if (isRegisterMode && !purchaseCode.trim()) {
+      if (isRegisterMode && !freeSignup && !purchaseCode.trim()) {
         setErrorMessage('Digite o código de compra para criar sua conta.');
         return;
       }
@@ -78,7 +79,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       try {
         const result = isRegisterMode
           ? await supabase.auth.signUp({email:email.trim(), password,
-              options:{data:{full_name:name.trim(),phone:phone.trim(),purchase_code:purchaseCode.trim()},emailRedirectTo:window.location.origin}})
+              options:{data:{full_name:name.trim(),phone:phone.trim(),purchase_code:freeSignup?'':purchaseCode.trim()},emailRedirectTo:window.location.origin}})
           : await supabase.auth.signInWithPassword({email:email.trim(),password});
         if (result.error) {
           setErrorMessage(authErrorMessage(result.error, isRegisterMode));
@@ -285,8 +286,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               </div>
             </div>
 
+            {isRegisterMode && <label className="flex items-start gap-3 rounded-xl border border-orange-200 bg-orange-50 p-4 text-sm"><input type="checkbox" checked={freeSignup} onChange={e=>setFreeSignup(e.target.checked)} className="mt-1"/><span><strong>Começar no plano gratuito</strong><small className="block mt-1 text-slate-600">Um fornecedor liberado. Você pode escolher um plano depois.</small></span></label>}
             {/* License Code Section */}
-            {(!supabase || isRegisterMode) && <div className="pt-1">
+            {(!supabase || (isRegisterMode && !freeSignup)) && <div className="pt-1">
               <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-lg space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-slate-900 flex items-center gap-1.5">
