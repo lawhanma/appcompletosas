@@ -159,7 +159,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
     });
 
     const addTimer = (fn: () => void, ms: number) => {
-      const id = window.setTimeout(fn, ms);
+      const id = window.setTimeout(fn, Math.round(ms * (60800 / 30800)));
       timersRef.current.push(id);
     };
 
@@ -600,13 +600,13 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
 
                   <div className="p-3.5 bg-slate-50 border border-slate-200/70 rounded-lg">
                     <span className="text-[10px] font-medium text-slate-500 uppercase">
-                      Vendas Concluídas
+                      {freePlan?'Pedidos realizados':'Vendas Concluídas'}
                     </span>
                     <div className="text-xl font-mono-code font-bold text-slate-900 mt-1">
-                      {campaignResult.salesCount} {campaignResult.salesCount === 1 ? "venda" : "vendas"}
+                      {freePlan?'Aguardando registro':<>{campaignResult.salesCount} {campaignResult.salesCount === 1 ? 'venda' : 'vendas'}</>}
                     </div>
                     <span className="text-[10px] text-slate-400">
-                      Pedidos faturados
+                      {freePlan?'A divulgação não confirma pedidos automaticamente':'Pedidos faturados'}
                     </span>
                   </div>
 

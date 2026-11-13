@@ -3,6 +3,7 @@ import {usePromotionCampaign} from '../hooks/usePromotionCampaign';
 import {PromotionCampaignCard} from './PromotionCampaignCard';
 import {CampaignProfileField} from './CampaignProfileField';
 import {useCampaignProfile,CampaignProfile} from '../hooks/useCampaignProfile';
+import {useCloudAccount} from "../context/CloudAccount";
 import React, { useState, useEffect, useRef } from "react";
 import { Product } from "../types";
 import { useFinancial } from "../context/FinancialContext";
@@ -68,6 +69,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
   onClose,
   onNavigateToFinancial
 }) => {
+  const freePlan=useCloudAccount()?.membership.plan==='free';
   const { addCommission, userCode, state, consumeAiCredit } = useFinancial();
   const [renewalOpen, setRenewalOpen] = useState(false);
   const profilePicker=useCampaignProfile();
@@ -335,7 +337,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
           record('campaign',`${product.id}:${Date.now()}`);
         }, 1500);
       }
-    }, 4000);
+    }, 4000 + 30000 / 7);
 
     return () => clearInterval(postInterval);
   }, [phase, product, userCode]);
@@ -702,7 +704,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
                 </div>
 
                 <h3 className="text-2xl sm:text-3xl font-black tracking-tight">
-                  Parabéns! Sua Campanha Gerou {totalSales} Vendas!
+                  {freePlan?'Divulgação concluída. Aguarde o registro dos pedidos.':`Parabéns! Sua Campanha Gerou ${totalSales} Vendas!`}
                 </h3>
 
                 <p className="text-xs sm:text-sm text-emerald-100 max-w-xl mx-auto">
@@ -712,8 +714,8 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
                 {/* 4 Main Numbers Highlight Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3">
                   <div className="p-3 bg-white/15 backdrop-blur-md rounded-2xl border border-white/20 text-center">
-                    <span className="text-[10px] text-emerald-100 uppercase font-black block">Total de Vendas</span>
-                    <span className="text-2xl font-black text-white">{totalSales}</span>
+                    <span className="text-[10px] text-emerald-100 uppercase font-black block">{freePlan?'Pedidos realizados':'Total de Vendas'}</span>
+                    <span className="text-2xl font-black text-white">{freePlan?'Aguardando registro':totalSales}</span>
                     <span className="text-[9px] text-emerald-200 block">pedidos aprovados</span>
                   </div>
 

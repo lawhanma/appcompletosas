@@ -326,7 +326,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
             </div>
 
             <div className="text-2xl font-mono-code font-bold text-slate-900 mt-2 tracking-tight">
-              {hideValues ? "••" : displayPedidos} <span className="text-xs font-normal text-slate-500">vendas</span>
+              {hideValues ? "••" : displayPedidos} <span className="text-xs font-normal text-slate-500">{promotion?.wallet.plan==='free'?'pedidos':'vendas'}</span>
             </div>
           </div>
 
