@@ -332,7 +332,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
               Object.values(CAMPAIGN_SALES).reduce((a,b)=>a+b,0)
             );
           }
-          void promotion.complete();
+          void promotion.complete();void manualOrders.reload();
           consumeAiCredit();
           if (state.aiCredits <= 1) setRenewalOpen(true);
           setPhase("results");
@@ -347,7 +347,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
   // Aggregate stats
   const isVipUser = userCode === "123456" || userCode === "12456";
   const totalSales = isVipUser ? platforms.reduce((acc, p) => acc + p.salesCount, 0) : 0;
-  const totalRevenue = isVipUser ? totalSales * product.price : 0;
+  const totalRevenue = promotion.enabled?(promotion.award?.amount_cents||0)/100:isVipUser ? totalSales * product.price : 0;
   const totalCommission = promotion.enabled?(promotion.award?.amount_cents||0)/100:isVipUser ? (earnedCommission > 0 ? earnedCommission : totalSales * product.commissionValue) : 0;
   const totalReach = platforms.reduce((acc, p) => acc + p.views, 0);
 
@@ -359,7 +359,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
       `🔗 Link de afiliado: ${campaignLink}\n` +
       `💰 Preço: R$ ${product.price.toFixed(2).replace(".", ",")}\n` +
       `🔥 Vendas Realizadas: ${totalSales} vendas\n` +
-      `💵 Faturamento Total: R$ ${totalRevenue.toFixed(2).replace(".", ",")}\n` +
+      `💵 ${promotion.enabled?'Receita da divulgação':'Faturamento Total'}: R$ ${totalRevenue.toFixed(2).replace(".", ",")}\n` +
       `💎 ${promotion.enabled?'Comissão promocional ShopGO (liberação imediata)':'Sua Comissão Líquida (PIX)'}: R$ ${totalCommission.toFixed(2).replace(".", ",")}\n` +
       `👥 ${promotion.enabled?'Alcance estimado (ilustrativo, não medido)':'Pessoas Alcançadas'}: ${totalReach.toLocaleString("pt-BR")} visualizações\n\n` +
       `📊 Desempenho por Rede Social:\n` +
@@ -722,7 +722,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
                   </div>
 
                   <div className="p-3 bg-white/15 backdrop-blur-md rounded-2xl border border-white/20 text-center">
-                    <span className="text-[10px] text-emerald-100 uppercase font-black block">Faturamento Bruto</span>
+                    <span className="text-[10px] text-emerald-100 uppercase font-black block">{promotion.enabled?'Receita da divulgação':'Faturamento Bruto'}</span>
                     <span className="text-xl sm:text-2xl font-black text-white">
                       R$ {totalRevenue.toFixed(2).replace(".", ",")}
                     </span>

@@ -52,7 +52,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
   const [hoveredPoint, setHoveredPoint] = useState<{ label: string; value: string } | null>(null);
 
   const handleRefresh = () => {
-    setIsRefreshing(true);
+    setIsRefreshing(true);void promotion?.reload();void manualOrders.reload();
     setTimeout(() => {
       setIsRefreshing(false);
     }, 500);
@@ -60,12 +60,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
 
   // Metrics based on selected period: strictly R$ 0,00 for standard code 101190
   const displayFaturamento = useMemo(() => {
+    if(promotional)return (promotion!.wallet.earnings_by_period?.[selectedPeriod]??(selectedPeriod==='hoje'?promotion!.wallet.earned_today_cents:0))/100;
     if (!isVip) return 0.00;
     if (selectedPeriod === "hoje") return state.faturamentoDiario;
     if (selectedPeriod === "ontem") return 2840.00;
     if (selectedPeriod === "7dias") return 18650.00;
     return state.faturamentoMes;
-  }, [selectedPeriod, state.faturamentoDiario, state.faturamentoMes, isVip]);
+  }, [selectedPeriod, state.faturamentoDiario, state.faturamentoMes, isVip,promotional,promotion?.wallet.earnings_by_period,promotion?.wallet.earned_today_cents]);
 
   const displayComissoes = useMemo(() => {
     if(promotional)return available+pending+promotion!.wallet.requested_cents/100;
@@ -262,7 +263,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
           <div>
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-slate-500">
-                Faturamento {selectedPeriod === "hoje" ? "Hoje" : selectedPeriod === "ontem" ? "Ontem" : selectedPeriod === "7dias" ? "Últimos 7 dias" : "do Mês"}
+                {promotional?'Receita de divulgações':'Faturamento'} {selectedPeriod === "hoje" ? "Hoje" : selectedPeriod === "ontem" ? "Ontem" : selectedPeriod === "7dias" ? "Últimos 7 dias" : "do Mês"}
               </span>
               <div className="w-7 h-7 rounded-md bg-orange-50 text-[#EE4D2D] flex items-center justify-center">
                 <TrendingUp className="w-3.5 h-3.5" />
@@ -274,7 +275,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
             </div>
           </div>
 
-          <p className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500">Valores registrados no período selecionado.</p>
+          <p className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500">{promotional?'Ganhos em comissões custeadas pela ShopGO no período.':'Valores registrados no período selecionado.'}</p>
         </div>
 
         {/* Card 2: Saldo & Comissões Estimadas */}
@@ -334,9 +335,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-            <span className="text-slate-500">Ticket Médio:</span>
+            <span className="text-slate-500">{promotional?'Origem dos pedidos:':'Ticket Médio:'}</span>
             <span className="font-mono-code font-semibold text-slate-800">
-              {formatCurrency(displayFaturamento / Math.max(1, displayPedidos))}
+              {promotional?'Registro da equipe':formatCurrency(displayFaturamento / Math.max(1, displayPedidos))}
             </span>
           </div>
         </div>
@@ -586,7 +587,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
           <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60 flex items-start gap-2.5 text-xs text-slate-600">
             <Truck className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
             <div className="leading-relaxed">
-              <strong className="text-slate-800 font-medium">Regra de Liberação:</strong> As comissões entram como <strong>Saldo Pendente</strong>. Assim que a transportadora confirma o recebimento pelo cliente na Shopee ou TikTok Shop, o valor é liberado automaticamente para saque via PIX.
+              {promotional?<><strong className="text-slate-800 font-medium">Comissões por divulgação:</strong> Liberação imediata. Solicite o saque ao atingir {formatCurrency((promotion?.wallet.minimum_withdrawal_cents??15000)/100)}. O pagamento é realizado pela equipe ShopGO.</>:<><strong className="text-slate-800 font-medium">Regra de Liberação:</strong> As comissões de produtos seguem a confirmação de entrega.</>}
+
             </div>
           </div>
         </div>

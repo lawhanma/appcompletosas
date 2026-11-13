@@ -302,7 +302,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
           sales
         );
       }
-      void promotion.complete();
+      void promotion.complete();void manualOrders.reload();
       setIsPosting(false);
       if (state.aiCredits <= 1) setRenewalOpen(true);
       record('campaign',`${selectedProduct.id}:${Date.now()}`);
@@ -614,10 +614,10 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
 
                   <div className="p-3.5 bg-slate-50 border border-slate-200/70 rounded-lg">
                     <span className="text-[10px] font-medium text-slate-500 uppercase">
-                      Faturamento Bruto
+                      {promotion.enabled?'Receita da divulgação':'Faturamento Bruto'}
                     </span>
                     <div className="text-xl font-mono-code font-bold text-slate-900 mt-1">
-                      R$ {campaignResult.grossSales.toFixed(2).replace(".", ",")}
+                      R$ {(promotion.enabled?(promotion.award?.amount_cents||0)/100:campaignResult.grossSales).toFixed(2).replace(".", ",")}
                     </div>
                     <span className="text-[10px] text-slate-400">
                       Valor total vendido

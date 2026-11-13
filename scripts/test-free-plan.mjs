@@ -10,5 +10,5 @@ globalThis.qaAccount={membership:{plan:'free',active:true},profile:{id:'qa'}};
 const free=view.catalog();assert.match(free,/Seleção ShopGO · Gratuito/);assert.equal((free.match(/BLOQUEADO/g)||[]).length,6);assert.equal((free.match(/>Ver planos</g)||[]).length,6);
 globalThis.qaAccount={membership:{plan:'standard',active:true},profile:{id:'qa'}};
 assert.doesNotMatch(view.catalog(),/BLOQUEADO|Seleção ShopGO · Gratuito/);
-const plans=view.plans();assert.match(plans,/https:\/\/go.ironpayapp.com.br\/tm3czoy3gd/);assert.match(plans,/https:\/\/go.ironpayapp.com.br\/cmncr21xjh/);
+const plans=view.plans();assert.match(plans,/Oferta Black Friday/);assert.match(plans,/Vitalício/);assert.match(plans,/Todos os fornecedores do catálogo/);assert.match(plans,/https:\/\/go.ironpayapp.com.br\/tm3czoy3gd/);assert.match(plans,/https:\/\/go.ironpayapp.com.br\/cmncr21xjh/);
 console.log('PASS: one free supplier, six locked suppliers, paid catalog preserved and both checkout links. No account or payment created.');
