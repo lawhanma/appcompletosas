@@ -1,3 +1,4 @@
+import {useManualOrders} from "../hooks/useManualOrders";
 import {usePromotionRewards} from '../context/PromotionRewards';
 import React, { useState, useMemo } from "react";
 import { Product, NavTab } from "../types";
@@ -40,6 +41,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
     releaseDeliveredSale 
   } = useFinancial();
   const promotion=usePromotionRewards();
+  const manualOrders=useManualOrders();
   const promotional=promotion?.wallet.enabled===true;
   const available=promotional?promotion!.wallet.available_cents/100:state.saldoDisponivel;
   const pending=promotional?promotion!.wallet.pending_cents/100:state.saldoPendente;
@@ -76,12 +78,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
   }, [selectedPeriod, state.saldoDisponivel, state.saldoPendente, isVip,promotional,available,pending,promotion?.wallet.requested_cents]);
 
   const displayPedidos = useMemo(() => {
+    if(promotion?.wallet.plan==='free')return manualOrders.total;
     if (!isVip) return 0;
     if (selectedPeriod === "hoje") return state.pedidosHoje;
     if (selectedPeriod === "ontem") return 36;
     if (selectedPeriod === "7dias") return 245;
     return state.vendasRealizadas;
-  }, [selectedPeriod, state.pedidosHoje, state.vendasRealizadas, isVip]);
+  }, [selectedPeriod, state.pedidosHoje, state.vendasRealizadas, isVip,promotion?.wallet.plan,manualOrders.total]);
 
   // Hourly curve for chart (00h, 04h, 08h, 12h, 16h, 20h, 23h)
   const chartData = useMemo(() => {
@@ -318,7 +321,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
           <div>
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-slate-500">
-                Pedidos Realizados
+                {promotion?.wallet.plan==='free'?'Pedidos registrados · total':'Pedidos Realizados'}
               </span>
               <div className="w-7 h-7 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center">
                 <ShoppingBag className="w-3.5 h-3.5" />

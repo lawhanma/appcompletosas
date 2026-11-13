@@ -13,6 +13,7 @@ const GerarVideosIAView=lazy(()=>import("./components/GerarVideosIAView").then(m
 const DashboardView=lazy(()=>import("./components/DashboardView").then(m=>({default:m.DashboardView})));
 const FinanceiroView=lazy(()=>import("./components/FinanceiroView").then(m=>({default:m.FinanceiroView})));
 const ConexoesView=lazy(()=>import("./components/ConexoesView").then(m=>({default:m.ConexoesView})));
+const OrdersView=lazy(()=>import("./components/OrdersView").then(m=>({default:m.OrdersView})));
 const PerfilView=lazy(()=>import("./components/PerfilView").then(m=>({default:m.PerfilView})));
 import { AuthScreen } from "./components/AuthScreen";
 import { WhatsAppFloatingButton } from "./components/WhatsAppFloatingButton";
@@ -171,6 +172,7 @@ function AppContent() {
         {/* Dynamic View Scrollable Container */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto pb-16"><Suspense fallback={<div role="status" className="space-y-4 animate-pulse"><div className="h-8 w-40 rounded-lg bg-slate-200"/><div className="h-48 rounded-2xl bg-white border border-slate-200"/><span className="sr-only">Carregando tela…</span></div>}>
+            {activeTab === "pedidos" && <OrdersView/>}
             {activeTab === "perfis" && <MeusPerfisView />}
             {activeTab === 'missoes' && <DailyMissionsView onNavigate={(tab,sub)=>handleNavigateTab(tab,undefined,sub)} />}
             {activeTab === "catalogo" && (

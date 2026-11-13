@@ -1,3 +1,5 @@
+import {useOrdersAdmin} from "../hooks/useManualOrders";
+import {ClipboardList} from "lucide-react";
 import React from "react";
 import { NavTab } from "../types";
 import { ShopNextLogo } from "./ShopNextLogo";
@@ -30,6 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onLogout,
 }) => {
   const { state } = useFinancial();
+  const ordersAdmin=useOrdersAdmin();
   const menuItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
     { id: "dashboard", label: "Dashboard", icon: <LayoutGrid className="w-4 h-4" /> },
     { id: "perfis", label: "Meus Perfis", icon: <Users className="w-4 h-4" /> },
@@ -42,6 +45,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: "perfil", label: "Perfil", icon: <User className="w-4 h-4" /> },
   ];
 
+  if(ordersAdmin)menuItems.splice(2,0,{id:"pedidos",label:"Pedidos",icon:<ClipboardList className="w-4 h-4"/>});
   return (
     <aside 
       className={`bg-white border-r border-slate-200/70 flex flex-col justify-between transition-all duration-200 shrink-0 z-30 ${

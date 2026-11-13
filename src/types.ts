@@ -7,7 +7,8 @@ export type NavTab =
   | "gerar-videos" 
   | "conexoes" 
   | "perfil"
-  | "perfis";
+  | "perfis"
+  | "pedidos";
 
 export interface Supplier {
   id: string;

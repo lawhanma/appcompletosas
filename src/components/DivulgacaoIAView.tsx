@@ -1,3 +1,4 @@
+import {useManualOrders} from "../hooks/useManualOrders";
 import {useCloudAccount} from "../context/CloudAccount";
 import {illustrativeReach} from '../utils/estimatedReach';
 import {usePromotionCampaign} from '../hooks/usePromotionCampaign';
@@ -40,6 +41,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
   defaultSubTab = "automatica"
 }) => {
   const freePlan=useCloudAccount()?.membership.plan==='free';
+  const manualOrders=useManualOrders();
   const availableProducts=freePlan?PRODUCTS.filter(p=>p.category==='Utilidades'):PRODUCTS;
   const { state, userCode, isVip, hasUnlimitedAiCredits, addCommission, consumeAiCredit } = useFinancial();
   const [renewalOpen, setRenewalOpen] = useState(false);
@@ -600,13 +602,13 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
 
                   <div className="p-3.5 bg-slate-50 border border-slate-200/70 rounded-lg">
                     <span className="text-[10px] font-medium text-slate-500 uppercase">
-                      {freePlan?'Pedidos realizados':'Vendas Concluídas'}
+                      {freePlan?'Pedidos realizados · total':'Vendas Concluídas'}
                     </span>
                     <div className="text-xl font-mono-code font-bold text-slate-900 mt-1">
-                      {freePlan?'Aguardando registro':<>{campaignResult.salesCount} {campaignResult.salesCount === 1 ? 'venda' : 'vendas'}</>}
+                      {freePlan?manualOrders.total:<>{campaignResult.salesCount} {campaignResult.salesCount === 1 ? 'venda' : 'vendas'}</>}
                     </div>
                     <span className="text-[10px] text-slate-400">
-                      {freePlan?'A divulgação não confirma pedidos automaticamente':'Pedidos faturados'}
+                      {freePlan?'Pedidos registrados pela equipe na sua conta':'Pedidos faturados'}
                     </span>
                   </div>
 

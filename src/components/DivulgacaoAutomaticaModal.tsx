@@ -1,3 +1,4 @@
+import {useManualOrders} from "../hooks/useManualOrders";
 import {illustrativeReach} from '../utils/estimatedReach';
 import {usePromotionCampaign} from '../hooks/usePromotionCampaign';
 import {PromotionCampaignCard} from './PromotionCampaignCard';
@@ -70,6 +71,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
   onNavigateToFinancial
 }) => {
   const freePlan=useCloudAccount()?.membership.plan==='free';
+  const manualOrders=useManualOrders();
   const { addCommission, userCode, state, consumeAiCredit } = useFinancial();
   const [renewalOpen, setRenewalOpen] = useState(false);
   const profilePicker=useCampaignProfile();
@@ -704,7 +706,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
                 </div>
 
                 <h3 className="text-2xl sm:text-3xl font-black tracking-tight">
-                  {freePlan?'Divulgação concluída. Aguarde o registro dos pedidos.':`Parabéns! Sua Campanha Gerou ${totalSales} Vendas!`}
+                  {freePlan?'Divulgação concluída. Consulte os pedidos registrados pela equipe.':`Parabéns! Sua Campanha Gerou ${totalSales} Vendas!`}
                 </h3>
 
                 <p className="text-xs sm:text-sm text-emerald-100 max-w-xl mx-auto">
@@ -714,8 +716,8 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
                 {/* 4 Main Numbers Highlight Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3">
                   <div className="p-3 bg-white/15 backdrop-blur-md rounded-2xl border border-white/20 text-center">
-                    <span className="text-[10px] text-emerald-100 uppercase font-black block">{freePlan?'Pedidos realizados':'Total de Vendas'}</span>
-                    <span className="text-2xl font-black text-white">{freePlan?'Aguardando registro':totalSales}</span>
+                    <span className="text-[10px] text-emerald-100 uppercase font-black block">{freePlan?'Pedidos realizados · total':'Total de Vendas'}</span>
+                    <span className="text-2xl font-black text-white">{freePlan?manualOrders.total:totalSales}</span>
                     <span className="text-[9px] text-emerald-200 block">pedidos aprovados</span>
                   </div>
 
