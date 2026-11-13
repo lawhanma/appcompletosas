@@ -1,6 +1,6 @@
 # Plano gratuito e comissões por divulgação
 
-Novos cadastros sem código recebem `memberships.plan=free` no servidor. Um código válido continua concedendo o plano pago correspondente; um código inválido continua sendo recusado. Contas existentes não são rebaixadas.
+Novos cadastros com código `121314` recebem `memberships.plan=free` no servidor. Um código válido continua concedendo o plano pago correspondente; um código inválido continua sendo recusado. Contas existentes não são rebaixadas.
 
 O gratuito mostra a seleção de Utilidades ShopGO. Outros fornecedores e a seleção Black Friday abrem a janela dos planos mensal e vitalício. Os botões levam ao checkout; não alteram permissões. O processo atual de confirmação e ativação do acesso pago continua sendo necessário.
 

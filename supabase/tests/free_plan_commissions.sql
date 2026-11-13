@@ -1,7 +1,7 @@
 begin;
 select set_config('qa.free',gen_random_uuid()::text,true),set_config('qa.paid',gen_random_uuid()::text,true),set_config('qa.profile',gen_random_uuid()::text,true),set_config('qa.other',gen_random_uuid()::text,true);
 insert into auth.users(id,email,raw_user_meta_data) values
-(current_setting('qa.free')::uuid,'qa-'||current_setting('qa.free')||'@example.invalid','{}'),
+(current_setting('qa.free')::uuid,'qa-'||current_setting('qa.free')||'@example.invalid','{"purchase_code":"121314"}'),
 (current_setting('qa.paid')::uuid,'qa-'||current_setting('qa.paid')||'@example.invalid','{"purchase_code":"55321"}');
 insert into public.affiliate_profiles(id,user_id,name,platform) values
 (current_setting('qa.profile')::uuid,current_setting('qa.free')::uuid,'Free plan QA','instagram'),
