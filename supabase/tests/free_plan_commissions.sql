@@ -21,7 +21,7 @@ do $$declare cid uuid; r jsonb; again jsonb; wid uuid:=gen_random_uuid(); total_
   update shopgo_rewards.campaigns set started_at=clock_timestamp()-interval '31 seconds' where id=cid;
   r:=public.complete_promotion_campaign(cid);again:=public.complete_promotion_campaign(cid);
   assert r=again,'Duplicate completion changed reward';
-  assert (r->>'amount_cents')::integer between 3000 and 8000,'Free reward outside range';
+  assert (r->>'amount_cents')::integer between 3000 and 4400,'Free reward outside range';
   assert (r->>'available_at')::timestamptz=(r->>'completed_at')::timestamptz,'Reward not immediately available';
  end loop;
  total_:=(public.get_promotion_wallet()->>'available_cents')::integer;
