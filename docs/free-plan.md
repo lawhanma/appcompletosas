@@ -12,3 +12,5 @@ Migração: `supabase/migrations/202611130001_free_plan_and_immediate_commission
 Teste transacional sem persistência: `supabase/tests/free_plan_commissions.sql`.
 
 O gratuito permite um único perfil por conta, incluindo perfis arquivados. O banco serializa novas criações por usuário para impedir cadastros concorrentes acima do limite. Editar o perfil e as imagens continua permitido. Perfis já existentes são preservados.
+
+O sorteio no plano gratuito exclui o valor exato da comissão anterior da mesma conta. Confirmações repetidas da mesma campanha mantêm o valor original e não adicionam saldo novamente.

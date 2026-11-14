@@ -7,7 +7,7 @@ insert into public.affiliate_profiles(id,user_id,name,platform) values
 (current_setting('qa.profile')::uuid,current_setting('qa.free')::uuid,'Free plan QA','instagram'),
 (current_setting('qa.other')::uuid,current_setting('qa.paid')::uuid,'Paid plan QA','facebook');
 select set_config('request.jwt.claim.sub',current_setting('qa.free'),true);
-do $$declare cid uuid; r jsonb; again jsonb; wid uuid:=gen_random_uuid(); total_ integer;begin
+do $$declare cid uuid; r jsonb; again jsonb; wid uuid:=gen_random_uuid(); total_ integer; previous_ integer;begin
  assert (select plan='free' from public.memberships where user_id=current_setting('qa.free')::uuid),'Free signup failed';
  assert (public.get_promotion_wallet()->>'enabled')::boolean,'Free wallet disabled';
  assert (public.get_promotion_wallet()->>'minimum_withdrawal_cents')::integer=20000,'Free minimum incorrect';
@@ -22,6 +22,8 @@ do $$declare cid uuid; r jsonb; again jsonb; wid uuid:=gen_random_uuid(); total_
   r:=public.complete_promotion_campaign(cid);again:=public.complete_promotion_campaign(cid);
   assert r=again,'Duplicate completion changed reward';
   assert (r->>'amount_cents')::integer between 3000 and 4400,'Free reward outside range';
+  if previous_ is not null then assert (r->>'amount_cents')::integer<>previous_,'Consecutive free rewards repeated';end if;
+  previous_:=(r->>'amount_cents')::integer;
   assert (r->>'available_at')::timestamptz=(r->>'completed_at')::timestamptz,'Reward not immediately available';
  end loop;
  total_:=(public.get_promotion_wallet()->>'available_cents')::integer;
