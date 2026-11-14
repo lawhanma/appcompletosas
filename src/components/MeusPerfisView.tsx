@@ -1,3 +1,5 @@
+import {useCloudAccount} from "../context/CloudAccount";
+import {UpgradePlanModal} from "./UpgradePlanModal";
 import {ProfileImageField} from './ProfileImageField';
 import React,{useState,useRef,useEffect} from 'react';
 import {Plus,ArrowUpRight,BarChart3,Pencil,X,Instagram,Facebook,Youtube,Send,MessageCircle,Music2,Film,Users,Search,ChevronLeft,Receipt,Archive,Check,Loader2} from 'lucide-react';
@@ -31,6 +33,8 @@ export const MeusPerfisView:React.FC=()=>{const store=useAffiliateProfiles();ret
 
 export const ProfilesWorkspace:React.FC<{store:ProfilesStore}>=({store})=>{
   const {profiles,sales,loading,error,reload,saveProfile,saveSale,voidSale}=store;
+  const freePlan=useCloudAccount()?.membership.plan==='free';
+  const [upgrade,setUpgrade]=useState(false);
   const [query,setQuery]=useState(''),[network,setNetwork]=useState('all'),[period,setPeriod]=useState<'month'|'30'|'all'>('month');
   const [editing,setEditing]=useState<AffiliateProfile|null|undefined>(),[metricId,setMetricId]=useState<string|null>(null),[saleProfile,setSaleProfile]=useState<string|null>(null);
   const [busy,setBusy]=useState(false),[formError,setFormError]=useState(''),[notice,setNotice]=useState('');
@@ -38,7 +42,7 @@ export const ProfilesWorkspace:React.FC<{store:ProfilesStore}>=({store})=>{
   const filtered=profiles.filter(p=>(network==='all'||p.platform===network)&&`${p.name} ${p.handle}`.toLowerCase().includes(query.toLowerCase()));
   const allowed=new Set(filtered.map(p=>p.id));const totals=profileMetrics(sales.filter(s=>allowed.has(s.profile_id)),undefined,start);
   const active=profiles.filter(p=>!p.archived).length;
-  function edit(profile?:AffiliateProfile){setFormError('');setEditing(profile||null);}
+  function edit(profile?:AffiliateProfile){if(!profile&&freePlan&&profiles.length>=1){setUpgrade(true);return;}setFormError('');setEditing(profile||null);}
   async function submitProfile(e:React.FormEvent<HTMLFormElement>){e.preventDefault();if(busy)return;if(e.currentTarget.querySelector('[data-checking="true"]')){setFormError('Aguarde a conferência da imagem antes de salvar.');return;}const d=new FormData(e.currentTarget);setBusy(true);setFormError('');try{
     await saveProfile({name:String(d.get('name')),handle:String(d.get('handle')),url:String(d.get('url')),platform:d.get('platform') as Platform,color:d.get('color') as ProfileColor,archived:d.get('archived')==='on'},editing?.id,{avatar:(d.get('avatarFile') as File)?.size?d.get('avatarFile') as File:undefined,banner:(d.get('bannerFile') as File)?.size?d.get('bannerFile') as File:undefined,removeAvatar:d.get('removeAvatar')==='yes',removeBanner:d.get('removeBanner')==='yes'});
     setEditing(undefined);setNotice('Perfil salvo.');
@@ -49,9 +53,11 @@ export const ProfilesWorkspace:React.FC<{store:ProfilesStore}>=({store})=>{
   const stats=current?profileMetrics(sales,current.id,start):null;
   const close=()=>{if(!busy){setEditing(undefined);setSaleProfile(null);setFormError('');}};
   return <div className="space-y-6 text-slate-800">
+    {upgrade&&<UpgradePlanModal onClose={()=>setUpgrade(false)}/>}
+    {freePlan&&<div className="rounded-xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-900"><strong>Seu plano inclui 1 perfil.</strong><p className="mt-1 text-xs">Você pode editar seu perfil, foto e banner. Para adicionar mais perfis, escolha um plano pago.</p></div>}
     <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-5">
       <div><p className="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-semibold mb-2">Sua presença, organizada</p><h1 className="text-3xl tracking-tight font-semibold text-slate-950">Meus Perfis<span className="text-slate-300 ml-2 text-xl">{profiles.length.toString().padStart(2,'0')}</span></h1><p className="text-sm text-slate-500 mt-2">Cada perfil tem seu espaço. Cada resultado, sua origem.</p></div>
-      <button onClick={()=>edit()} className={primary}><Plus className="w-4 h-4"/>Adicionar perfil</button>
+      <button onClick={()=>edit()} className={primary}><Plus className="w-4 h-4"/>{freePlan&&profiles.length>=1?'Desbloquear mais perfis':'Adicionar perfil'}</button>
     </header>
     {notice&&<div role="status" className="flex items-center justify-between rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-sm text-emerald-800"><span>{notice}</span><button aria-label="Dispensar aviso" onClick={()=>setNotice('')}><X className="w-4 h-4"/></button></div>}
     <section className="grid grid-cols-2 lg:grid-cols-4 rounded-2xl border border-slate-200 bg-white overflow-hidden divide-x divide-slate-100">
@@ -66,7 +72,7 @@ export const ProfilesWorkspace:React.FC<{store:ProfilesStore}>=({store})=>{
           <div className="flex gap-2 pt-4"><button onClick={()=>edit(p)} className={`${secondary} flex-1`}><Pencil className="w-3.5 h-3.5"/>Editar perfil</button><button onClick={()=>setMetricId(p.id)} aria-label={`Ver métricas de ${p.name}`} title="Ver métricas" className={`${secondary} px-3`}><BarChart3 className="w-4 h-4"/></button></div>
         </div>
       </article>;})}
-      {!filtered.length&&<div className="md:col-span-2 xl:col-span-3 py-16 text-center border border-dashed border-slate-300 rounded-2xl"><Users className="w-8 h-8 mx-auto text-slate-300 mb-4"/><h2 className="font-semibold text-slate-800">{profiles.length?'Nenhum perfil encontrado':'Seu próximo resultado começa com um perfil'}</h2><p className="text-sm text-slate-500 mt-2 mb-5">{profiles.length?'Tente outro nome ou plataforma.':'Adicione suas redes para organizar as vendas de cada uma.'}</p><button onClick={()=>edit()} className={primary}><Plus className="w-4 h-4"/>Adicionar perfil</button></div>}
+      {!filtered.length&&<div className="md:col-span-2 xl:col-span-3 py-16 text-center border border-dashed border-slate-300 rounded-2xl"><Users className="w-8 h-8 mx-auto text-slate-300 mb-4"/><h2 className="font-semibold text-slate-800">{profiles.length?'Nenhum perfil encontrado':'Seu próximo resultado começa com um perfil'}</h2><p className="text-sm text-slate-500 mt-2 mb-5">{profiles.length?'Tente outro nome ou plataforma.':'Adicione suas redes para organizar as vendas de cada uma.'}</p><button onClick={()=>edit()} className={primary}><Plus className="w-4 h-4"/>{freePlan&&profiles.length>=1?'Desbloquear mais perfis':'Adicionar perfil'}</button></div>}
     </div>}
     <p className="text-[11px] text-slate-400 leading-relaxed">Métricas calculadas a partir das vendas que você registrar por perfil. Cadastrar uma rede não conecta sua conta nem importa resultados automaticamente.</p>
 

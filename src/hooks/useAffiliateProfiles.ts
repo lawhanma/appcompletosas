@@ -33,6 +33,7 @@ export function useAffiliateProfiles():ProfilesStore {
   useEffect(()=>{setProfiles([]);setSales([]);void reload();const refresh=()=>{if(document.visibilityState==='visible')void reload();};const timer=window.setInterval(refresh,45*60*1000);document.addEventListener('visibilitychange',refresh);return()=>{version.current++;window.clearInterval(timer);document.removeEventListener('visibilitychange',refresh);};},[owner]);
   function client(){if(!supabase||!owner)throw new Error('Entre na sua conta para salvar.');return supabase;}
   async function saveProfile(input:ProfileInput,id?:string,media:ProfileMediaInput={}){
+    if(!id&&account?.membership.plan==='free'&&profiles.length>=1)throw new Error('Seu plano gratuito permite 1 perfil. Escolha um plano pago para adicionar mais.');
     const value=validateProfile(input),db=client(),uploaded:string[]=[];
     const paths:Record<string,string>={};
     try {
@@ -48,7 +49,7 @@ export function useAffiliateProfiles():ProfilesStore {
       if(media.removeBanner&&!media.banner)paths.banner_path='';
       const row={...value,...paths};
       const q=id?db.from('affiliate_profiles').update(row).eq('id',id).eq('user_id',owner):db.from('affiliate_profiles').insert({...row,user_id:owner});
-      const result=await q.select('id').single();if(result.error)throw new Error('Não foi possível salvar o perfil. Tente novamente.');
+      const result=await q.select('id').single();if(result.error)throw new Error(result.error.message.includes('Free plan profile limit reached')?'Seu plano gratuito permite 1 perfil. Escolha um plano pago para adicionar mais.':'Não foi possível salvar o perfil. Tente novamente.');
     }catch(error){if(uploaded.length)await db.storage.from(PROFILE_MEDIA_BUCKET).remove(uploaded);throw error;}
     await reload();
   }

@@ -10,3 +10,5 @@ As comissões são liberadas imediatamente, inclusive as antigas conforme autori
 
 Migração: `supabase/migrations/202611130001_free_plan_and_immediate_commissions.sql`.
 Teste transacional sem persistência: `supabase/tests/free_plan_commissions.sql`.
+
+O gratuito permite um único perfil por conta, incluindo perfis arquivados. O banco serializa novas criações por usuário para impedir cadastros concorrentes acima do limite. Editar o perfil e as imagens continua permitido. Perfis já existentes são preservados.
