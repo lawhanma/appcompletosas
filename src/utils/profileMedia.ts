@@ -8,7 +8,21 @@ export function validateProfileImage(file:Pick<File,'type'|'size'>) {
 }
 export async function checkImageFile(file:File){
   validateProfileImage(file);
-  const bitmap=await createImageBitmap(file).catch(()=>{throw new Error('Não foi possível abrir esta imagem. Escolha outro arquivo.');});
-  const valid=bitmap.width>0&&bitmap.height>0&&bitmap.width<=12000&&bitmap.height<=12000;bitmap.close();
-  if(!valid)throw new Error('Use uma imagem com até 12.000 pixels de largura e altura.');
+  if(typeof createImageBitmap==='function'){
+    try {
+      const bitmap=await createImageBitmap(file,{resizeWidth:512,resizeHeight:512,resizeQuality:'low'});
+      const valid=bitmap.width>0&&bitmap.height>0;bitmap.close();
+      if(!valid)throw new Error('Imagem inválida.');
+      return;
+    }catch{/* Use the browser image decoder when bitmap decoding is unsupported. */}
+  }
+  if(typeof Image==='undefined'||typeof URL.createObjectURL!=='function')throw new Error('Não foi possível abrir esta imagem neste navegador.');
+  await new Promise<void>((resolve,reject)=>{
+    const image=new Image(),url=URL.createObjectURL(file);
+    const done=(error?:Error)=>{clearTimeout(timer);image.onload=null;image.onerror=null;URL.revokeObjectURL(url);error?reject(error):resolve();};
+    const timer=setTimeout(()=>done(new Error('A imagem demorou para abrir. Escolha um arquivo menor.')),15000);
+    image.onload=()=>done(image.naturalWidth>0&&image.naturalHeight>0&&image.naturalWidth*image.naturalHeight<=24000000?undefined:new Error('Escolha uma imagem menor, com até 24 megapixels.'));
+    image.onerror=()=>done(new Error('Não foi possível abrir esta imagem. Escolha outro arquivo.'));
+    image.src=url;
+  });
 }

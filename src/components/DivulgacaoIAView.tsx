@@ -97,7 +97,7 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
     views: number;
     affiliateLink: string;
     copyText: string;
-    profile: CampaignProfile;
+    profile: CampaignProfile|null;
   } | null>(null);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -137,12 +137,12 @@ export const DivulgacaoIAView: React.FC<DivulgacaoIAViewProps> = ({
   // Run Automated Posting Simulation (~30s realistic sequential process)
   const handleStartAutoPosting = async () => {
     if(isPosting)return;
-    const chosenProfile=profilePicker.requireProfile();
-    if(!chosenProfile)return;
+    const chosenProfile=profilePicker.optionalProfile();
+    if(profilePicker.fieldProps.value&&!chosenProfile)return;
     if (state.aiCredits <= 0) {setRenewalOpen(true);return;}
     const campaignLink = validateAffiliateLink(affiliateLink);
     if (!campaignLink) {setLinkError('Cole um link de afiliado válido, começando com https:// ou http://.');return;}
-    if(!(await promotion.start(chosenProfile.id,selectedProduct.name)))return;
+    if(!(await promotion.start(chosenProfile?.id??null,selectedProduct.name)))return;
     setLinkError('');
     setCampaignProfile(chosenProfile);
 

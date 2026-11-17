@@ -4,7 +4,7 @@ import {checkImageFile} from '../utils/profileMedia';
 
 export const ProfileImageField:React.FC<{kind:'avatar'|'banner';url?:string;disabled:boolean}>=({kind,url,disabled})=>{
   const [file,setFile]=useState<File|null>(null),[removed,setRemoved]=useState(false),[error,setError]=useState(''),[preview,setPreview]=useState(''),[checking,setChecking]=useState(false);
-  useEffect(()=>{if(!file){setPreview('');return;}const u=URL.createObjectURL(file);setPreview(u);return()=>URL.revokeObjectURL(u);},[file]);
+  useEffect(()=>{if(!file){setPreview('');return;}try{const u=URL.createObjectURL(file);setPreview(u);return()=>URL.revokeObjectURL(u);}catch{setPreview('');setError('A prévia não está disponível. Você ainda pode salvar o perfil sem imagem.');}},[file]);
   const shown=preview||(!removed?url:'');const title=kind==='avatar'?'Foto de perfil':'Banner do perfil';
   return <div className="space-y-2" data-checking={checking?'true':undefined}><p className="text-xs font-medium">{title}</p><div className={`relative overflow-hidden border border-dashed border-slate-300 bg-slate-50 ${kind==='avatar'?'w-24 h-24 rounded-2xl':'w-full h-24 rounded-xl'}`}>
     {shown?<img src={shown} alt={`Prévia: ${title}`} className="w-full h-full object-cover"/>:<div className="h-full flex items-center justify-center text-slate-300"><ImagePlus className="w-6 h-6"/></div>}

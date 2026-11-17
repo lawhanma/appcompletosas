@@ -3,7 +3,7 @@ import {PromotionAward,usePromotionRewards} from '../context/PromotionRewards';
 export function usePromotionCampaign(){
  const rewards=usePromotionRewards(),id=useRef<string|null>(null),lock=useRef(false);
  const [award,setAward]=useState<PromotionAward|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
- async function start(profile:string,product:string){
+ async function start(profile:string|null,product:string){
   if(lock.current)return false;
   if(id.current){setError('Confirme o registro anterior antes de iniciar outra divulgação.');return false;}
   if(rewards?.loading||rewards?.error){setError('Aguarde a consulta das comissões ou atualize a página.');return false;}

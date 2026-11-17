@@ -203,12 +203,12 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
   // Start automated distribution process
   const startDistribution = async () => {
     if(phase!=="idle"&&phase!=="results")return;
-    const chosenProfile=profilePicker.requireProfile();
-    if(!chosenProfile)return;
+    const chosenProfile=profilePicker.optionalProfile();
+    if(profilePicker.fieldProps.value&&!chosenProfile)return;
     if (state.aiCredits <= 0) {setRenewalOpen(true);return;}
     const validLink = validateAffiliateLink(affiliateLink);
     if (!validLink) {setLinkError('Cole um link de afiliado válido, começando com https:// ou http://.');return;}
-    if(!(await promotion.start(chosenProfile.id,product.name)))return;
+    if(!(await promotion.start(chosenProfile?.id??null,product.name)))return;
     reachSeed.current=crypto.randomUUID();
     setLinkError('');setCampaignLink(validLink);setCampaignProfile(chosenProfile);
     setPhase("loading");
@@ -354,7 +354,7 @@ const ActiveDivulgacaoModal: React.FC<Omit<DivulgacaoAutomaticaModalProps, 'prod
   // Copy full sales campaign report
   const handleCopyReport = () => {
     const reportText = `🚀 RELATÓRIO DE DIVULGAÇÃO AUTOMÁTICA COM IA\n` +
-      `👤 Perfil: ${campaignProfile?.label||''}\n` +
+      `👤 Perfil: ${campaignProfile?.label||'Sem perfil · conta ShopGO'}\n` +
       `📦 Produto: ${product.name}\n` +
       `🔗 Link de afiliado: ${campaignLink}\n` +
       `💰 Preço: R$ ${product.price.toFixed(2).replace(".", ",")}\n` +

@@ -1,0 +1,14 @@
+import {build} from 'esbuild';
+import assert from 'node:assert/strict';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {renderToStaticMarkup} from 'react-dom/server';
+const outfile=path.resolve('node_modules/.cache/error-boundary-check.mjs');
+await build({entryPoints:['src/components/AppErrorBoundary.tsx'],outfile,bundle:true,platform:'node',format:'esm',packages:'external'});
+const {AppErrorBoundary}=await import(pathToFileURL(outfile));
+const boundary=new AppErrorBoundary({children:'original-screen'});
+assert.equal(boundary.render(),'original-screen');
+boundary.state=AppErrorBoundary.getDerivedStateFromError(new Error('Failed to fetch dynamically imported module'));
+const fallback=renderToStaticMarkup(boundary.render());
+assert.match(fallback,/role="alert"/);assert.match(fallback,/Atualizar página/);assert.doesNotMatch(fallback,/original-screen/);
+console.log('PASS: failed view renders a recovery message instead of an empty screen.');

@@ -26,5 +26,6 @@ export function useCampaignProfile() {
     try {const profile=resolveCampaignProfile(profiles,value,loading,loadError);setError('');return profile;}
     catch(e){setError(e instanceof Error?e.message:'Não foi possível selecionar o perfil.');return null;}
   }
-  return {fieldProps:{profiles,value,onChange:select,loading,error:loadError||error,onReload:()=>{void reload();}},requireProfile};
+  function optionalProfile():CampaignProfile|null {if(!value){setError('');return null;}return requireProfile();}
+  return {fieldProps:{profiles,value,onChange:select,loading,error:loadError||error,onReload:()=>{void reload();}},requireProfile,optionalProfile};
 }
