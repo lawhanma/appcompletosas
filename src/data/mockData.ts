@@ -110,23 +110,22 @@ export const PRODUCTS: Product[] = RAW_ALL_PRODUCTS.map((p) => ({
   shopeeUrl: getWorkingShopeeUrl(p)
 }));
 
-// Black Friday selection from the existing catalog; body splash leads the list.
+// November selection: public Shopee rankings highlight Bluetooth audio and Christmas lights. These are demand signals, not guarantees of sales.
 export const MINED_PRODUCTS: Product[] = [
+  PRODUCTS_ELETRONICOS[0],
   PRODUCTS_COSMETICOS[0],
   PRODUCTS_ELETRONICOS[1],
+  PRODUCTS_SAZONAIS[1],
+  PRODUCTS_SAZONAIS[0],
+  PRODUCTS_COSMETICOS[1],
+  PRODUCTS_COSMETICOS[2],
   PRODUCTS_COZINHA[2],
   PRODUCTS_BRINQUEDOS[4],
   PRODUCTS_ELETRONICOS[5],
   PRODUCTS_CASA_JARDIM[3],
   PRODUCTS_UTILIDADES[4],
   PRODUCTS_COZINHA[7],
-  PRODUCTS_SAZONAIS[0],
   PRODUCTS_BRINQUEDOS[0],
-  PRODUCTS_COZINHA[15],
-  PRODUCTS_ELETRONICOS[0],
-  PRODUCTS_COSMETICOS[1],
-  PRODUCTS_COZINHA[3],
-  PRODUCTS_ELETRONICOS[3],
 ].map((product, index) => ({
   ...product,
   shopeeUrl: getWorkingShopeeUrl(product),
