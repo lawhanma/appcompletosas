@@ -1,6 +1,6 @@
-// Presentation data only. This never changes the server-side membership or Auth.
+// Profile badge only. Membership and access are determined independently.
 export const isPresentationAccount = (email?: string) =>
   email?.trim().toLowerCase() === 'isaquelaw@gmail.com';
 
-export const getPresentationCode = (plan: string, email?: string) =>
-  plan === 'vip' || isPresentationAccount(email) ? '123456' : plan === 'free' ? 'free' : '101190';
+export const getAccountPlanCode = (plan: string) =>
+  plan === 'vip' ? '123456' : plan === 'free' ? 'free' : '101190';

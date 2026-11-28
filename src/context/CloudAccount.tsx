@@ -3,7 +3,7 @@ import type {Session} from '@supabase/supabase-js';
 import {supabase} from '../lib/supabase';
 import {internalDb} from '../utils/internalDb';
 import {AuthScreen} from '../components/AuthScreen';
-import {getPresentationCode, isPresentationAccount} from '../utils/presentationAccount';
+import {getAccountPlanCode, isPresentationAccount} from '../utils/presentationAccount';
 
 export interface CloudProfile { id: string; full_name: string; phone: string; pix_key: string }
 interface Membership { plan: 'free' | 'standard' | 'vip'; active: boolean }
@@ -66,7 +66,7 @@ export function CloudAccountGate({children}: {children: React.ReactNode}) {
           internalDb.clearSession();
           internalDb.saveSession({userEmail: identity.user.email || '', name: p.data.full_name,
             phone: p.data.phone, pixKey: p.data.pix_key, authenticated: true,
-            isVip: m.data.plan === 'vip', purchaseCode: getPresentationCode(m.data.plan, identity.user.email)});
+            isVip: m.data.plan === 'vip', purchaseCode: getAccountPlanCode(m.data.plan)});
           localStorage.setItem('shopnext_profile_custom', JSON.stringify({name:p.data.full_name,phone:p.data.phone,pixKey:p.data.pix_key}));
         }
       }

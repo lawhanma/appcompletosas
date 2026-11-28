@@ -195,9 +195,12 @@ export const PerfilView: React.FC = () => {
   return (
     <div className="max-w-4xl space-y-6">
       <div className="pb-4 border-b border-slate-200/70">
-        <h1 className="font-display text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-          Perfil & Configurações da Conta
-        </h1>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <h1 className="font-display text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+            Perfil & Configurações da Conta
+          </h1>
+          {cloudAccount?.isShopGoOwner && <span className="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">Conta prévia</span>}
+        </div>
         <p className="text-xs text-slate-500 mt-1">
           Gerencie suas informações de acesso, plano ativo e dados para recebimento de comissões.
         </p>

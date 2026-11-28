@@ -21,7 +21,6 @@ export interface Transaction {
 }
 
 export interface FinancialState {
-  presentationDataVersion?: number;
   userEmail: string;
   userCode: "101190" | "887422" | "123456" | "12456" | string;
   faturamentoDiario: number;       // Faturamento bruto do dia (adiciona até R$ 3.000 para 123456)
@@ -130,29 +129,7 @@ export const createCleanState = (code: string, email?: string, initialFirstAcces
     firstAccessAt,
     transactions: []
   };
-  if (!isPresentationAccount(userEmail)) return initial;
-  const transactions: Transaction[] = PRODUCTS.slice(0, 12).map((product, index) => {
-    const saleAmount = Number(Math.min(149.90, Math.max(49.90, product.price)).toFixed(2));
-    const delivered = index >= 5;
-    return {
-      id: `EXAMPLE-${index}`, date: 'Hoje', timestamp: Date.now() - index * 1800000,
-      product: product.name, channel: index % 2 ? 'TikTok Shop' : 'Shopee Afiliados',
-      saleAmount, amount: Number((saleAmount * product.commissionRate / 100).toFixed(2)),
-      type: 'comissao', status: delivered ? 'concluido' : 'pendente',
-      deliveryStatus: delivered ? 'entregue_ao_cliente' : 'aguardando_entrega',
-      imageUrl: product.imageUrl,
-    };
-  });
-  const sum = (values: number[]) => Number(values.reduce((a,b)=>a+b,0).toFixed(2));
-  const revenue = sum(transactions.map(t=>t.saleAmount));
-  const available = sum(transactions.filter(t=>t.status==='concluido').map(t=>t.amount));
-  const pending = sum(transactions.filter(t=>t.status==='pendente').map(t=>t.amount));
-  return {...initial, userCode: '123456', presentationDataVersion: 1,
-    faturamentoDiario: revenue, faturamentoMes: 18240 + revenue, metaFaturamentoDiario: 3000,
-    saldoDisponivel: available, saldoPendente: pending, vendasRealizadas: 156,
-    pedidosHoje: transactions.length, unidadesVendidas: 172, cliquesVisualizacoes: 4820,
-    comissaoMedia: Number(((available+pending)/transactions.length).toFixed(2)),
-    dailyAccumulated: available+pending, aiCredits: 5, transactions};
+  return initial;
 };
 
 const INITIAL_101190: FinancialState = createCleanState("101190");
@@ -170,16 +147,25 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (activeSession && isPresentationAccount(activeSession.userEmail) &&
-            (parsed.userEmail !== activeSession.userEmail || parsed.presentationDataVersion !== 1)) {
-          return createCleanState(activeSession.purchaseCode, activeSession.userEmail);
-        }
         if (activeSession && parsed.userEmail !== activeSession.userEmail) {
           return createCleanState(activeSession.purchaseCode, activeSession.userEmail);
         }
         if (activeSession && activeSession.purchaseCode) {
           parsed.userCode = activeSession.purchaseCode;
           if (activeSession.userEmail) parsed.userEmail = activeSession.userEmail;
+        }
+        if (isPresentationAccount(parsed.userEmail) &&
+            (parsed.presentationDataVersion === 1 ||
+              (Array.isArray(parsed.transactions) &&
+                parsed.transactions.some(transaction => typeof transaction?.id === "string" && transaction.id.startsWith("EXAMPLE-"))))) {
+          const code = typeof parsed.userCode === "string" ? parsed.userCode : "101190";
+          const clean = createCleanState(code, parsed.userEmail, parsed.firstAccessAt);
+          if (parsed.currentDayString !== clean.currentDayString) return clean;
+          return {
+            ...clean,
+            aiCredits: Number.isFinite(parsed.aiCredits) ? Math.max(0, parsed.aiCredits) : clean.aiCredits,
+            hasDoneDivulgacao: Boolean(parsed.hasDoneDivulgacao),
+          };
         }
         const isVip = parsed.userCode === "123456" || parsed.userCode === "12456";
         const today = getTodayString();
@@ -279,7 +265,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       let finalAmount = amount;
       const actualSaleAmount = saleAmount || (finalAmount * 6.5);
-      const cap = isPresentationAccount(prev.userEmail) ? Infinity : 3000.00;
+      const cap = 3000.00;
       const newFaturamento = Math.min(cap, Number((prev.faturamentoDiario + actualSaleAmount).toFixed(2)));
       
       const newSaldoDisponivel = isDivulgacao 
