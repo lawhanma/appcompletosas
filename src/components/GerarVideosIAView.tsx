@@ -2,6 +2,8 @@ import { createBlackFridayVideo } from "../utils/blackFridayVideo";
 import {AdDescriptionGenerator} from './AdDescriptionGenerator';
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { apiFetch } from "../lib/apiFetch";
+import { useCloudAccount } from "../context/CloudAccount";
+import { OwnerVideoPreview } from "./OwnerVideoPreview";
 import { GOOGLE_FLOW_TUTORIAL_URL, GOOGLE_FLOW_URL } from "../utils/videoAccess";
 import { Product, GeneratedVideoData, InfluencerConfig, RecordingFormatId } from "../types";
 import { PRODUCTS } from "../data/mockData";
@@ -26,6 +28,7 @@ export const GerarVideosIAView: React.FC<GerarVideosIAViewProps> = ({
     initialProduct || PRODUCTS[0] // Kit Body Splash Obsession or Fone Bluetooth
   );
   const [categoryFilter, setCategoryFilter] = useState("Todos");
+  const isShopGoOwner = useCloudAccount()?.isShopGoOwner === true;
   const [selectedVoice, setSelectedVoice] = useState("Júlia (Voz Enérgica / TikTok)");
   const [selectedMusic, setSelectedMusic] = useState("TikTok Upbeat (Viral)");
   const [selectedHook, setSelectedHook] = useState("Viral Curiosidade");
@@ -75,6 +78,7 @@ export const GerarVideosIAView: React.FC<GerarVideosIAViewProps> = ({
   const [copyError, setCopyError] = useState("");
   const flowRequest = useRef<AbortController | null>(null);
   const flowResultRef = useRef<HTMLDivElement>(null);
+  const ownerPreviewRef = useRef<HTMLDivElement>(null);
   const categories = ["Todos", "Cosméticos", "Eletrônicos", "Sazonais", "Utilidades", "Cozinha", "Casa & Jardim", "Brinquedos"];
 
   const videoData = useMemo<GeneratedVideoData>(() => selectedFormatId === "black_friday"
@@ -257,7 +261,12 @@ Legenda Sugerida: ${videoData.caption || "Link direto com desconto nos comentár
           </p>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {isShopGoOwner && (
+            <button type="button" onClick={() => { ownerPreviewRef.current?.scrollIntoView({ block: "start" }); ownerPreviewRef.current?.focus({ preventScroll: true }); }} className="inline-flex min-h-11 items-center rounded-xl border border-orange-200 bg-orange-50 px-4 text-xs font-semibold text-orange-800 hover:bg-orange-100">
+              Abrir prévia animada
+            </button>
+          )}
           <button
             onClick={handleGenerateFlowPrompt}
             disabled={isGeneratingFlowPrompt}
@@ -828,7 +837,12 @@ Legenda Sugerida: ${videoData.caption || "Link direto com desconto nos comentár
         </div>
 
         {/* RIGHT COLUMN: Mobile Smartphone Preview (5 cols) (Exact Match to Screenshot 4!) */}
-        <div className="lg:col-span-5 flex flex-col items-center">
+        <div className="lg:col-span-5 flex flex-col items-center gap-4">
+          {isShopGoOwner && (
+            <div key={`${selectedProduct.id}:${selectedFormatId}`} ref={ownerPreviewRef} tabIndex={-1} className="w-full max-w-md scroll-mt-4">
+              <OwnerVideoPreview product={selectedProduct} scenes={videoData.scenes} />
+            </div>
+          )}
           <div className="w-full max-w-md rounded-2xl border border-orange-200 bg-white p-6 shadow-xs space-y-4">
             <div className="w-12 h-12 rounded-xl bg-orange-50 text-[#FF5722] flex items-center justify-center">
               <Sparkles className="w-6 h-6" />

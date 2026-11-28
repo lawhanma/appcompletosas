@@ -1,5 +1,7 @@
 import {useManualOrders} from "../hooks/useManualOrders";
 import {usePromotionRewards} from '../context/PromotionRewards';
+import { useCloudAccount } from "../context/CloudAccount";
+import { PromotionBalanceSummary } from "./PromotionBalanceSummary";
 import React, { useState, useMemo } from "react";
 import { Product, NavTab } from "../types";
 import { PRODUCTS } from "../data/mockData";
@@ -41,6 +43,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
     releaseDeliveredSale 
   } = useFinancial();
   const promotion=usePromotionRewards();
+  const isShopGoOwner = useCloudAccount()?.isShopGoOwner === true;
+  const ownerBalanceLoaded = Boolean(promotion?.wallet.server_now) && !promotion?.error;
   const manualOrders=useManualOrders();
   const promotional=promotion?.wallet.enabled===true;
   const available=promotional?promotion!.wallet.available_cents/100:state.saldoDisponivel;
@@ -60,13 +64,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
 
   // Metrics based on selected period: strictly R$ 0,00 for standard code 101190
   const displayFaturamento = useMemo(() => {
-    if(promotional)return (promotion!.wallet.earnings_by_period?.[selectedPeriod]??(selectedPeriod==='hoje'?promotion!.wallet.earned_today_cents:0))/100;
+    if(promotional || isShopGoOwner)return (promotion?.wallet.earnings_by_period?.[selectedPeriod]??(selectedPeriod==='hoje'?promotion?.wallet.earned_today_cents??0:0))/100;
     if (!isVip) return 0.00;
     if (selectedPeriod === "hoje") return state.faturamentoDiario;
     if (selectedPeriod === "ontem") return 2840.00;
     if (selectedPeriod === "7dias") return 18650.00;
     return state.faturamentoMes;
-  }, [selectedPeriod, state.faturamentoDiario, state.faturamentoMes, isVip,promotional,promotion?.wallet.earnings_by_period,promotion?.wallet.earned_today_cents]);
+  }, [selectedPeriod, state.faturamentoDiario, state.faturamentoMes, isVip,promotional,isShopGoOwner,promotion?.wallet.earnings_by_period,promotion?.wallet.earned_today_cents]);
 
   const displayComissoes = useMemo(() => {
     if(promotional)return available+pending+promotion!.wallet.requested_cents/100;
@@ -263,7 +267,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
           <div>
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-slate-500">
-                {promotional?'Receita de divulgações':'Faturamento'} {selectedPeriod === "hoje" ? "Hoje" : selectedPeriod === "ontem" ? "Ontem" : selectedPeriod === "7dias" ? "Últimos 7 dias" : "do Mês"}
+                {promotional || isShopGoOwner ? 'Receita de divulgações' : 'Faturamento'} {selectedPeriod === "hoje" ? "Hoje" : selectedPeriod === "ontem" ? "Ontem" : selectedPeriod === "7dias" ? "Últimos 7 dias" : "do Mês"}
               </span>
               <div className="w-7 h-7 rounded-md bg-orange-50 text-[#EE4D2D] flex items-center justify-center">
                 <TrendingUp className="w-3.5 h-3.5" />
@@ -271,14 +275,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
             </div>
             
             <div className="text-2xl font-mono-code font-bold text-slate-900 mt-2 tracking-tight">
-              {formatCurrency(displayFaturamento)}
+              {isShopGoOwner && !ownerBalanceLoaded ? "—" : formatCurrency(displayFaturamento)}
             </div>
           </div>
 
-          <p className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500">{promotional?'Ganhos em comissões custeadas pela ShopGO no período.':'Valores registrados no período selecionado.'}</p>
+          <p className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500">{promotional || isShopGoOwner ? 'Comissões de divulgação registradas no período.' : 'Valores registrados no período selecionado.'}</p>
         </div>
 
-        {/* Card 2: Saldo & Comissões Estimadas */}
+        {isShopGoOwner ? <PromotionBalanceSummary onOpenFinance={() => onNavigateTab("financeiro")} /> : (
         <div className="bg-white p-4.5 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
@@ -317,6 +321,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
           </div>
         </div>
 
+        )}
         {/* Card 3: Pedidos Realizados */}
         <div className="bg-white p-4.5 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
           <div>

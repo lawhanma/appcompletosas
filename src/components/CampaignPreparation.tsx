@@ -6,6 +6,9 @@ import { CreditRenewalModal } from "./CreditRenewalModal";
 import { useCampaignProfile } from "../hooks/useCampaignProfile";
 import { useFinancial } from "../context/FinancialContext";
 import { useDailyMissions } from "../context/DailyMissions";
+import { useCloudAccount } from "../context/CloudAccount";
+import { usePromotionRewards } from "../context/PromotionRewards";
+import { PromotionBalanceSummary } from "./PromotionBalanceSummary";
 import { validateAffiliateLink } from "../utils/affiliateLink";
 import type { Product } from "../types";
 
@@ -18,6 +21,8 @@ const steps = [
 export const CampaignPreparation: React.FC<{ product: Product; onBusyChange?: (busy: boolean) => void }> = ({ product, onBusyChange }) => {
   const { state, hasUnlimitedAiCredits, consumeAiCredit } = useFinancial();
   const { record } = useDailyMissions();
+  const isShopGoOwner = useCloudAccount()?.isShopGoOwner === true;
+  const rewards = usePromotionRewards();
   const profilePicker = useCampaignProfile();
   const [link, setLink] = useState("");
   const [error, setError] = useState("");
@@ -26,8 +31,8 @@ export const CampaignPreparation: React.FC<{ product: Product; onBusyChange?: (b
   const [copyStatus, setCopyStatus] = useState("");
   const [renewalOpen, setRenewalOpen] = useState(false);
   const timer = useRef<number | undefined>(undefined);
-  const latest = useRef({ consumeAiCredit, onBusyChange });
-  latest.current = { consumeAiCredit, onBusyChange };
+  const latest = useRef({ consumeAiCredit, onBusyChange, reloadBalance: isShopGoOwner ? rewards?.reload : undefined });
+  latest.current = { consumeAiCredit, onBusyChange, reloadBalance: isShopGoOwner ? rewards?.reload : undefined };
   const busy = progress !== null;
   const outOfCredits = !hasUnlimitedAiCredits && state.aiCredits <= 0;
 
@@ -76,6 +81,7 @@ export const CampaignPreparation: React.FC<{ product: Product; onBusyChange?: (b
         exampleClicks: 8 + Math.floor(Math.random() * 22),
       });
       record("campaign", `${product.id}:${Date.now()}`);
+      void latest.current.reloadBalance?.();
     }, 250);
   }
 
@@ -129,6 +135,7 @@ export const CampaignPreparation: React.FC<{ product: Product; onBusyChange?: (b
           {copyStatus && <p role="status" className="text-sm text-slate-700">{copyStatus}</p>}
         </section>
       )}
+      {isShopGoOwner && <PromotionBalanceSummary />}
       {renewalOpen && <CreditRenewalModal onClose={() => setRenewalOpen(false)} />}
     </div>
   );

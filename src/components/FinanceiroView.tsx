@@ -2,6 +2,7 @@ import {WithdrawalAnticipation} from './WithdrawalAnticipation';
 import {usePromotionRewards} from '../context/PromotionRewards';
 import {useCloudAccount} from '../context/CloudAccount';
 import {PromotionFinancialPanel} from './PromotionFinancialPanel';
+import {PromotionBalanceSummary} from './PromotionBalanceSummary';
 import React, { useState } from "react";
 import { useFinancial } from "../context/FinancialContext";
 import { 
@@ -21,6 +22,10 @@ import {
 
 export const FinanceiroView:React.FC=()=>{
  const rewards=usePromotionRewards(),account=useCloudAccount();
+ if (account?.isShopGoOwner) {
+  if (rewards?.wallet.enabled) return <PromotionFinancialPanel />;
+  return <div className="space-y-4"><h1 className="text-2xl font-semibold text-slate-950">Financeiro e comissões</h1><PromotionBalanceSummary /></div>;
+ }
  if((account?.membership.plan==='standard'||account?.membership.plan==='free')&&rewards){
   if(rewards.loading)return <p role="status" className="p-6 text-sm text-slate-500">Carregando financeiro…</p>;
   if(rewards.error)return <div role="alert" className="p-6 text-sm text-rose-700">{rewards.error}<button onClick={()=>{void rewards.reload();}} className="ml-2 underline">Tentar novamente</button></div>;
