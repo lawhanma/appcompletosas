@@ -1,9 +1,8 @@
 import express from "express";
 import path from "path";
-import { GoogleGenAI } from "@google/genai";
+import type { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
-import { createClient } from "@supabase/supabase-js";
-import { GOOGLE_FLOW_URL } from "./src/utils/videoAccess";
+import { GOOGLE_FLOW_URL } from "./src/utils/videoAccess.js";
 
 dotenv.config({path: ['.env.local', '.env']});
 
@@ -21,6 +20,7 @@ app.use('/api/ai', async (req, res, next) => {
   const token = req.headers.authorization?.match(/^Bearer (.+)$/i)?.[1];
   if (!token) return res.status(401).json({error:'Entre na sua conta para continuar.'});
   try {
+    const { createClient } = await import("@supabase/supabase-js");
     const client = createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false},global:{headers:{Authorization:`Bearer ${token}`}}});
     const {data,error} = await client.auth.getUser(token);
     if (error || !data.user) return res.status(401).json({error:'Sessão inválida. Entre novamente.'});
@@ -38,18 +38,16 @@ app.use('/api/ai/generate-video-script', (_req, res) =>
 
 // Lazy-initialized Gemini client
 let aiClient: GoogleGenAI | null = null;
-function getGeminiClient(): GoogleGenAI | null {
-  if (!aiClient && process.env.GEMINI_API_KEY) {
-    aiClient = new GoogleGenAI({
-      apiKey: process.env.GEMINI_API_KEY,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build',
-        },
-      },
-    });
+async function getGeminiClient(): Promise<GoogleGenAI | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (aiClient || !apiKey) return aiClient;
+  try {
+    const { GoogleGenAI } = await import("@google/genai");
+    aiClient = new GoogleGenAI({ apiKey });
+    return aiClient;
+  } catch {
+    return null;
   }
-  return aiClient;
 }
 
 // Health check
@@ -66,7 +64,7 @@ app.post("/api/ai/generate-group-sales-text", async (req, res) => {
       !["facebook", "whatsapp", "telegram"].includes(platform)) {
     return res.status(400).json({ error: "Selecione um produto e um grupo válidos." });
   }
-  const ai = getGeminiClient();
+  const ai = await getGeminiClient();
   if (!ai) return res.status(503).json({ error: "IA indisponível." });
   try {
     const response = await ai.models.generateContent({
@@ -88,7 +86,7 @@ app.post("/api/ai/generate-group-sales-text", async (req, res) => {
 app.post("/api/ai/generate-copy", async (req, res) => {
   try {
     const { productName, price, originalPrice, category, targetChannel, tone } = req.body;
-    const ai = getGeminiClient();
+    const ai = await getGeminiClient();
 
     if (ai) {
       const prompt = `Você é o especialista de copywriting de alta conversão do ShopNext, um SaaS para afiliados e lojistas da Shopee, Mercado Livre e TikTok Shop.
@@ -189,7 +187,7 @@ app.post("/api/ai/generate-flow-prompt", async (req, res) => {
       ? "Peça para conferir o preço atualizado e as condições no link de afiliado. Não invente descontos, avaliações ou urgência."
       : `Preço informado: ${price}.${typeof originalPrice === "string" && originalPrice.trim() ? ` Preço anterior informado: ${originalPrice}.` : ""} Oriente o público a conferir as condições no link.`;
 
-    const ai = getGeminiClient();
+    const ai = await getGeminiClient();
     if (ai) {
       const prompt = `Você é um diretor de fotografia e especialista em IA generativa de vídeo de alta fidelidade para ferramentas como Google Flow, Kling, Runway Gen-3 e Sora.
 Sua missão é gerar um PROMPT COMPLETO E 100% EM PORTUGUÊS (BRASIL) PARA O GOOGLE FLOW QUE SIGA RIGOROSA E LITERALMENTE TODAS AS CONFIGURAÇÕES SELECIONADAS PELO USUÁRIO.
@@ -290,7 +288,7 @@ Aspect Ratio: 9:16 Vertical | FPS: 60fps | Resolução: 4K UHD | Lente: 35mm f/1
 });
 
 // Setup Vite middleware in dev or static files in production
-async function startServer() {
+export async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     const {createServer: createViteServer} = await import('vite');
     const vite = await createViteServer({
@@ -311,5 +309,4 @@ async function startServer() {
   });
 }
 
-if (!process.env.VERCEL) startServer();
 export default app;
