@@ -7,18 +7,12 @@ import { useCampaignProfile } from "../hooks/useCampaignProfile";
 import { useFinancial } from "../context/FinancialContext";
 import { useDailyMissions } from "../context/DailyMissions";
 import { useCloudAccount } from "../context/CloudAccount";
-import { usePromotionRewards } from "../context/PromotionRewards";
-import { PromotionBalanceSummary } from "./PromotionBalanceSummary";
 import { PublicationRehearsal } from "./PublicationRehearsal";
 import { validateAffiliateLink } from "../utils/affiliateLink";
 import { getWorkingShopeeUrl } from "../utils/shopee";
 import type { Product } from "../types";
 
-const steps = [
-  "Conferindo o link de afiliado",
-  "Preparando o texto da oferta",
-  "Montando as opções de compartilhamento",
-];
+const campaignDurationMs = 64_000;
 const randomInteger = (min: number, max: number) => min + Math.floor(Math.random() * (max - min + 1));
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -26,7 +20,6 @@ export const CampaignPreparation: React.FC<{ product: Product; onBusyChange?: (b
   const { state, hasUnlimitedAiCredits, consumeAiCredit } = useFinancial();
   const { record } = useDailyMissions();
   const isShopGoOwner = useCloudAccount()?.isShopGoOwner === true;
-  const rewards = usePromotionRewards();
   const profilePicker = useCampaignProfile();
   const [link, setLink] = useState("");
   const [error, setError] = useState("");
@@ -36,8 +29,8 @@ export const CampaignPreparation: React.FC<{ product: Product; onBusyChange?: (b
   const [copyStatus, setCopyStatus] = useState("");
   const [renewalOpen, setRenewalOpen] = useState(false);
   const timer = useRef<number | undefined>(undefined);
-  const latest = useRef({ consumeAiCredit, onBusyChange, reloadBalance: isShopGoOwner ? rewards?.reload : undefined });
-  latest.current = { consumeAiCredit, onBusyChange, reloadBalance: isShopGoOwner ? rewards?.reload : undefined };
+  const latest = useRef({ consumeAiCredit, onBusyChange });
+  latest.current = { consumeAiCredit, onBusyChange };
   const busy = progress !== null;
   const outOfCredits = !hasUnlimitedAiCredits && state.aiCredits <= 0;
 
@@ -68,9 +61,9 @@ export const CampaignPreparation: React.FC<{ product: Product; onBusyChange?: (b
     const startedAt = performance.now();
 
     timer.current = window.setInterval(() => {
-      const next = Math.min(100, Math.floor((performance.now() - startedAt) / (testRun ? 300 : 608)));
-      if (next < 100) {
-        setProgress(next);
+      const elapsed = performance.now() - startedAt;
+      if (elapsed < campaignDurationMs) {
+        setProgress(Math.floor(elapsed * 100 / campaignDurationMs));
         return;
       }
       window.clearInterval(timer.current);
@@ -89,7 +82,6 @@ export const CampaignPreparation: React.FC<{ product: Product; onBusyChange?: (b
       });
       if (!testRun) {
         record("campaign", `${product.id}:${Date.now()}`);
-        void latest.current.reloadBalance?.();
       }
     }, 250);
   }
@@ -123,12 +115,7 @@ export const CampaignPreparation: React.FC<{ product: Product; onBusyChange?: (b
         </div>
       </form>
 
-      {progress !== null && (testing ? <PublicationRehearsal progress={progress} /> : (
-        <div className="space-y-2 rounded-xl border border-orange-100 bg-orange-50 p-4">
-          <p role="status" className="text-sm font-semibold text-slate-900">{steps[Math.min(2, Math.floor(progress / 34))]}</p>
-          <progress aria-label="Progresso da divulgação" max={100} value={progress} className="block h-2 w-full accent-orange-600" />
-        </div>
-      ))}
+      {progress !== null && <PublicationRehearsal progress={progress} testing={testing} productName={product.name} />}
 
       {result && (
         <section aria-label="Oferta pronta" className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
@@ -158,7 +145,6 @@ export const CampaignPreparation: React.FC<{ product: Product; onBusyChange?: (b
           {copyStatus && <p role="status" className="text-sm text-slate-700">{copyStatus}</p>}
         </section>
       )}
-      {isShopGoOwner && <PromotionBalanceSummary />}
       {renewalOpen && <CreditRenewalModal onClose={() => setRenewalOpen(false)} />}
     </div>
   );

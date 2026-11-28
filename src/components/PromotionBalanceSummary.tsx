@@ -1,8 +1,8 @@
-import { ArrowRight, RefreshCw, Wallet } from "lucide-react";
+import { RefreshCw, Wallet } from "lucide-react";
 import { usePromotionRewards } from "../context/PromotionRewards";
 import { rewardMoney } from "./PromotionCampaignCard";
 
-export function PromotionBalanceSummary({ onOpenFinance }: { onOpenFinance?: () => void }) {
+export function PromotionBalanceSummary() {
   const rewards = usePromotionRewards();
   const wallet = rewards?.wallet;
   const ready = Boolean(wallet?.server_now) && !rewards?.error;
@@ -24,7 +24,6 @@ export function PromotionBalanceSummary({ onOpenFinance }: { onOpenFinance?: () 
       ) : (
         <p role="status" className="text-sm text-slate-600">{rewards?.loading ? "Consultando o saldo…" : "Saldo indisponível no momento. Tente atualizar."}</p>
       )}
-      {onOpenFinance && <button type="button" onClick={onOpenFinance} className="inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm font-semibold text-orange-800 hover:bg-orange-50">Ver financeiro <ArrowRight className="size-4" aria-hidden="true" /></button>}
     </section>
   );
 }
