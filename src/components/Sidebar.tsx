@@ -40,7 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: "financeiro", label: "Financeiro", icon: <DollarSign className="w-4 h-4" /> },
     { id: "catalogo", label: "Catálogo", icon: <Package className="w-4 h-4" /> },
     { id: "divulgacao", label: "Divulgação com IA", icon: <Sparkles className="w-4 h-4" /> },
-    { id: "gerar-videos", label: "Criar vídeos no Flow", icon: <Video className="w-4 h-4" /> },
+    { id: "gerar-videos", label: "Vídeo com IA", icon: <Video className="w-4 h-4" /> },
     { id: "conexoes", label: "Conexões e integrações", icon: <Link2 className="w-4 h-4" /> },
     { id: "perfil", label: "Perfil", icon: <User className="w-4 h-4" /> },
   ];

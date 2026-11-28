@@ -33,7 +33,7 @@ app.use('/api/ai', async (req, res, next) => {
 
 // Roteiros de vídeo eram apenas uma prévia simulada; a criação fica no Flow.
 app.use('/api/ai/generate-video-script', (_req, res) =>
-  res.status(410).json({error:'A geração de vídeo acontece pelo Google Flow.'})
+  res.status(410).json({error:'Use o criador de vídeo com IA para preparar um prompt.'})
 );
 
 // Lazy-initialized Gemini client
@@ -189,8 +189,8 @@ app.post("/api/ai/generate-flow-prompt", async (req, res) => {
 
     const ai = await getGeminiClient();
     if (ai) {
-      const prompt = `Você é um diretor de fotografia e especialista em IA generativa de vídeo de alta fidelidade para ferramentas como Google Flow, Kling, Runway Gen-3 e Sora.
-Sua missão é gerar um PROMPT COMPLETO E 100% EM PORTUGUÊS (BRASIL) PARA O GOOGLE FLOW QUE SIGA RIGOROSA E LITERALMENTE TODAS AS CONFIGURAÇÕES SELECIONADAS PELO USUÁRIO.
+      const prompt = `Você é um diretor de fotografia e especialista em prompts para editores de vídeo com IA.
+Crie um prompt completo em português do Brasil seguindo a configuração escolhida pelo usuário. Use descrições claras de cenas e câmera, sem mencionar marcas de editores nos títulos.
 
 IMPORTANTE: O prompt final deve refletir EXATAMENTE as opções escolhidas:
 1. SE A INFLUENCER TIVER CABELO "${influencerConfig?.hairColor}", PELE "${influencerConfig?.skinTone}" E PENTEADO "${influencerConfig?.hairStyle}", O PROMPT E CADA CENA DEVEM DESCREVÊ-LA COM ESSAS CARACTERÍSTICAS EXATAS. (Se for "Sem Rosto", nunca mostre rosto, apenas mãos!).
@@ -211,13 +211,13 @@ ${formattedScenesForPrompt}
 
 Retorne um JSON estrito:
 {
-  "flowPrompt": "Prompt completo em português contendo seções claras: [CONFIGURAÇÃO DA INFLUENCER], [FORMATO DE GRAVAÇÃO & CÂMERA], [ÁUDIO & VOZ], [ROTEIRO CENA A CENA DETALHADO] e [PARÂMETROS TÉCNICOS FLOW 9:16 4K].",
-  "flowPromptPortuguese": "O mesmo prompt completo formatado para copiar e colar diretamente no Google Flow sem precisar editar nada.",
+  "flowPrompt": "Prompt completo em português contendo seções claras para apresentação, formato, áudio, roteiro e parâmetros técnicos de vídeo 9:16.",
+  "flowPromptPortuguese": "O mesmo prompt completo formatado para copiar e colar no editor de vídeo.",
   "cameraMotion": "${recordingFormat?.simplifiedLabel || 'POV - Mãos em Close-up'}",
   "influencerSummary": "${influencerConfig?.name || 'Apresentadora'} • ${influencerConfig?.hairColor || 'Castanho'} • ${influencerConfig?.skinTone || 'Morena'}",
   "aspectRatio": "9:16 (Vertical TikTok / Reels / Shorts)",
   "lighting": "Luz suave de estúdio com luz de recorte âmbar e bokeh cinematográfico",
-  "tips": "Prompt gerado 100% de acordo com suas configurações de influencer, cabelo, pele e formato de câmera. Cole no Flow para gerar seu vídeo pronto!"
+  "tips": "Cole o prompt no editor externo para criar o vídeo."
 }`;
 
       try {
@@ -243,7 +243,7 @@ Retorne um JSON estrito:
     const userDetailAddonPt = customPrompt ? `\n[INSTRUÇÕES PERSONALIZADAS DO USUÁRIO]\n${customPrompt}\n` : "";
 
 
-    const promptText = `[PROMPT COMPLETO GERADO CONFORME SUAS CONFIGURAÇÕES PARA O GOOGLE FLOW]
+    const promptText = `[PROMPT DE VÍDEO PERSONALIZADO]
 Vídeo Comercial Cinematográfico 4K Ultra HD, Proporção Vertical 9:16 (TikTok, Instagram Reels, YouTube Shorts).
 Produto: ${productName} (${category || "Tendências Shopee"}).
 
@@ -267,7 +267,7 @@ ${sceneLinesPt}
 ${offerInstructions}
 Legenda Recomendada: ${caption || "Confira o preço atualizado e as condições no link."}
 
-[6. PARÂMETROS TÉCNICOS PARA O FLOW]
+[6. PARÂMETROS TÉCNICOS DO VÍDEO]
 Aspect Ratio: 9:16 Vertical | FPS: 60fps | Resolução: 4K UHD | Lente: 35mm f/1.8 | Render Style: Ultra-realistic commercial advertising`;
 
     return res.json({
@@ -283,7 +283,7 @@ Aspect Ratio: 9:16 Vertical | FPS: 60fps | Resolução: 4K UHD | Lente: 35mm f/1
     });
   } catch (error) {
     console.error("AI Flow Prompt generation error:", error);
-    res.status(500).json({ error: "Erro ao gerar prompt para o Flow" });
+    res.status(500).json({ error: "Não foi possível gerar o prompt do vídeo." });
   }
 });
 

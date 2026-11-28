@@ -9,10 +9,11 @@ export function OwnerVideoPreview({ product, scenes }: { product: Product; scene
   const [progress, setProgress] = useState<number | null>(null);
   const [sceneIndex, setSceneIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [showing, setShowing] = useState(false);
   const startedAt = useRef(0);
   const preparing = progress !== null && progress < 100;
   const ready = progress === 100 && scenes.length > 0;
-  const scene = ready ? scenes[sceneIndex] : undefined;
+  const scene = ready && showing ? scenes[sceneIndex] : undefined;
 
   useEffect(() => {
     if (!preparing) return;
@@ -37,6 +38,7 @@ export function OwnerVideoPreview({ product, scenes }: { product: Product; scene
 
   function prepare() {
     setPlaying(false);
+    setShowing(false);
     setSceneIndex(0);
     startedAt.current = performance.now();
     setProgress(0);
@@ -48,6 +50,7 @@ export function OwnerVideoPreview({ product, scenes }: { product: Product; scene
       return;
     }
     if (sceneIndex === scenes.length - 1) setSceneIndex(0);
+    setShowing(true);
     setPlaying(true);
   }
 
@@ -57,7 +60,7 @@ export function OwnerVideoPreview({ product, scenes }: { product: Product; scene
         <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-orange-400/15 text-orange-300"><Film className="size-5" aria-hidden="true" /></div>
         <div>
           <h2 id="owner-preview-title" className="font-semibold">Prévia animada do vídeo</h2>
-          <p className="text-sm text-slate-300">Veja as cenas antes de criar o vídeo final no Flow.</p>
+          <p className="text-sm text-slate-300">Confira como o roteiro fica no formato vertical.</p>
         </div>
       </header>
       <div className="relative mx-auto flex aspect-[9/16] w-full max-w-[15rem] flex-col overflow-hidden rounded-[1.6rem] border-4 border-slate-700 bg-slate-900 shadow-xl">
@@ -83,8 +86,8 @@ export function OwnerVideoPreview({ product, scenes }: { product: Product; scene
       </div>
       {ready && (
         <div className="flex flex-wrap items-center justify-center gap-2" aria-label="Controles da prévia">
-          <button type="button" onClick={play} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-slate-700 px-3 text-sm font-semibold hover:bg-slate-600">{playing ? <Pause className="size-4" /> : <Play className="size-4" />}{playing ? "Pausar" : "Reproduzir"}</button>
-          {scenes.map((_, index) => (
+          <button type="button" onClick={play} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-slate-700 px-3 text-sm font-semibold hover:bg-slate-600">{playing ? <Pause className="size-4" aria-hidden="true" /> : <Play className="size-4" aria-hidden="true" />}{playing ? "Pausar" : showing ? "Reproduzir" : "Ver como ficou o vídeo"}</button>
+          {showing && scenes.map((_, index) => (
             <button type="button" key={index} onClick={() => { setPlaying(false); setSceneIndex(index); }} aria-label={`Cena ${index + 1}`} aria-pressed={sceneIndex === index} className={`grid size-11 place-items-center rounded-lg text-sm font-semibold ${sceneIndex === index ? "bg-orange-300 text-slate-950" : "bg-slate-800 hover:bg-slate-700"}`}>{index + 1}</button>
           ))}
         </div>

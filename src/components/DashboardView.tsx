@@ -675,7 +675,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab }) =
               >
                 <Video className="w-4 h-4 text-[#EE4D2D] mb-1.5" />
                 <div className="text-xs font-semibold text-slate-900">
-                  Criar no Flow
+                  Criar vídeo com IA
                 </div>
                 <div className="text-[11px] text-slate-500">
                   Roteiros virais

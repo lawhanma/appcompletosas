@@ -55,7 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
           className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors cursor-pointer shadow-xs active:scale-[0.99]"
         >
           <Sparkles className="w-3.5 h-3.5 text-orange-400" />
-          <span>Criar no Flow</span>
+          <span>Criar vídeo com IA</span>
         </button>
 
         <button 

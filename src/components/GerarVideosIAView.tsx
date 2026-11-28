@@ -197,7 +197,7 @@ Estilo do Penteado: ${customHairStyle}
 Faixa Etária & Vibe: ${customAgeRange} - ${activeInfluencerConfig.vibe}
 Vestimenta: ${activeInfluencerConfig.outfit}`;
 
-      const ptPromptFull = `[PROMPT COMPLETO GERADO CONFORME SUAS CONFIGURAÇÕES PARA O GOOGLE FLOW]
+      const ptPromptFull = `[PROMPT DE VÍDEO PERSONALIZADO]
 Formato: Vídeo Comercial Cinematográfico 4K em 9:16 Vertical (TikTok, Reels e Shorts).
 Produto: ${selectedProduct.name} (${selectedProduct.category}).
 
@@ -220,7 +220,7 @@ ${scenesPt}
 Preço: ${selectedProduct.listingSourceUrl || selectedFormatId === "black_friday" ? "Confira o preço atualizado e as condições no link. Não invente descontos ou urgência." : `De ${originalFormatted} por apenas ${priceFormatted}!`}
 Legenda Sugerida: ${videoData.caption || "Link direto com desconto nos comentários e na bio!"}
 
-[PARÂMETROS TÉCNICOS FLOW]
+[PARÂMETROS TÉCNICOS DO VÍDEO]
 9:16 Vertical | 4K UHD 60fps | Lens 35mm f/1.8 | High-conversion advertising look`;
 
       setFlowPromptResult({
@@ -251,13 +251,13 @@ Legenda Sugerida: ${videoData.caption || "Link direto com desconto nos comentár
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
         <div>
           <h1 className="font-display text-2xl sm:text-[26px] font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
-            <span>Gerar Vídeos com IA</span>
+            <span>Vídeo com IA</span>
             <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-orange-50 border border-orange-200 text-[#FF5722] font-mono-code font-bold tracking-tight">
               TikTok & Reels
             </span>
           </h1>
           <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-            Prepare o roteiro e o prompt, depois gere o vídeo diretamente no Google Flow.
+            Prepare o roteiro e o prompt para criar seu vídeo no editor externo.
           </p>
         </div>
 
@@ -273,7 +273,7 @@ Legenda Sugerida: ${videoData.caption || "Link direto com desconto nos comentár
             className="px-5 py-2.5 rounded-xl text-white font-bold text-xs flex items-center gap-2 cursor-pointer disabled:opacity-50 btn-primary-tactile transition-all"
           >
             <Sparkles className="w-3.5 h-3.5 fill-white" />
-            <span>{isGeneratingFlowPrompt ? "Preparando prompt…" : "Preparar no Flow"}</span>
+            <span>{isGeneratingFlowPrompt ? "Preparando prompt…" : "Preparar vídeo com IA"}</span>
           </button>
         </div>
       </div>
@@ -848,8 +848,8 @@ Legenda Sugerida: ${videoData.caption || "Link direto com desconto nos comentár
               <Sparkles className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900">Seu vídeo será criado no Flow</h2>
-              <p className="mt-1 text-sm leading-relaxed text-slate-600">O ShopGO prepara o roteiro e o prompt. Depois, copie o resultado e gere o vídeo diretamente no Google Flow.</p>
+              <h2 className="text-base font-bold text-slate-900">Roteiro e prompt</h2>
+              <p className="mt-1 text-sm leading-relaxed text-slate-600">Depois de gerar o prompt, copie o texto e cole no editor externo para criar o vídeo final.</p>
             </div>
           </div>
         {/* Download & Export CTAs */}
@@ -869,7 +869,7 @@ Legenda Sugerida: ${videoData.caption || "Link direto com desconto nos comentár
               ) : (
                 <>
                   <Sparkles className="w-4 h-4 fill-white animate-pulse" />
-                  <span>Preparar vídeo no Flow</span>
+                  <span>Gerar prompt do vídeo</span>
                 </>
               )}
             </button>
@@ -883,7 +883,7 @@ Legenda Sugerida: ${videoData.caption || "Link direto com desconto nos comentár
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="text-xs font-black text-slate-900 flex items-center justify-between">
-                      <span>Gerando Prompt para o Flow...</span>
+                      <span>Gerando prompt do vídeo…</span>
                       <span className="text-[10px] text-[#FF5722] font-extrabold bg-orange-50 px-2 py-0.5 rounded">
                         {flowGenerationStep === 1 && "Passo 1/3"}
                         {flowGenerationStep === 2 && "Passo 2/3"}
@@ -893,7 +893,7 @@ Legenda Sugerida: ${videoData.caption || "Link direto com desconto nos comentár
                     <p className="text-[11px] text-slate-500 truncate mt-0.5">
                       {flowGenerationStep === 1 && "Analisando produto e especificações técnicas..."}
                       {flowGenerationStep === 2 && "Incorporando instruções do prompt personalizado..."}
-                      {flowGenerationStep >= 3 && "Otimizando comandos cinematográficos para o Flow..."}
+                      {flowGenerationStep >= 3 && "Organizando as instruções de câmera e edição…"}
                     </p>
                   </div>
                 </div>
@@ -1010,7 +1010,7 @@ Legenda Sugerida: ${videoData.caption || "Link direto com desconto nos comentár
                     ) : (
                       <>
                         <Copy className="w-4 h-4 text-white" />
-                        <span>Copiar Prompt em Português para Colar no Flow</span>
+                        <span>Copiar prompt em português</span>
                       </>
                     )}
                   </button>
@@ -1033,7 +1033,7 @@ Legenda Sugerida: ${videoData.caption || "Link direto com desconto nos comentár
 
                 {/* Guia simples */}
                 <p className="text-[11px] text-slate-600 leading-snug bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                  Copie o prompt antes de abrir o Flow. Depois, cole o texto no seu projeto para criar o vídeo.
+                  Copie o prompt antes de abrir o editor externo.
                 </p>
 
                 <details className="group rounded-xl border border-slate-200">
@@ -1043,7 +1043,7 @@ Legenda Sugerida: ${videoData.caption || "Link direto com desconto nos comentár
                   </summary>
                   <div className="grid gap-2 bg-slate-50 p-3">
                     <a href={GOOGLE_FLOW_URL} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center justify-between gap-3 rounded-lg bg-orange-600 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-700">
-                      Ir para o Flow criar o vídeo com o prompt
+                      Abrir editor de vídeo com IA
                       <ExternalLink className="size-4 shrink-0" aria-hidden="true" />
                     </a>
                     <a href={GOOGLE_FLOW_TUTORIAL_URL} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100">

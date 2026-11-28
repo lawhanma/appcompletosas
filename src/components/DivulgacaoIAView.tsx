@@ -18,7 +18,8 @@ export function DivulgacaoIAView({ initialProduct, onOpenVideoCreator, defaultSu
   onOpenVideoCreator?: (product: Product) => void;
   defaultSubTab?: SubTab;
 }) {
-  const freePlan = useCloudAccount()?.membership.plan === "free";
+  const account = useCloudAccount();
+  const freePlan = account?.membership.plan === "free";
   const available = freePlan ? PRODUCTS.filter(product => product.category === "Utilidades") : PRODUCTS;
   const [productId, setProductId] = useState(initialProduct?.id);
   const [search, setSearch] = useState("");
@@ -39,7 +40,7 @@ export function DivulgacaoIAView({ initialProduct, onOpenVideoCreator, defaultSu
       <nav aria-label="Opções de divulgação" className="flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1.5">
         {tabs.map(({ id, label, Icon }) => (
           <button key={id} type="button" aria-pressed={tab === id} disabled={busy && tab !== id} onClick={() => setTab(id)} className={`inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold disabled:opacity-45 ${tab === id ? "bg-orange-50 text-orange-800" : "text-slate-600 hover:bg-slate-50"}`}>
-            <Icon className="size-4" aria-hidden="true" />{label}
+            <Icon className="size-4" aria-hidden="true" />{id === "automatica" && account?.isShopGoOwner ? "Divulgação automática" : label}
           </button>
         ))}
       </nav>
@@ -61,7 +62,7 @@ export function DivulgacaoIAView({ initialProduct, onOpenVideoCreator, defaultSu
             <p className="break-words text-sm font-semibold text-slate-800">{product.name}</p>
           </section>
           <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6" aria-labelledby="campaign-title">
-            <h2 id="campaign-title" className="mb-3 text-xl font-semibold text-slate-900">Preparar divulgação</h2>
+            <h2 id="campaign-title" className="mb-3 text-xl font-semibold text-slate-900">{account?.isShopGoOwner ? "Divulgação automática" : "Preparar divulgação"}</h2>
             <CampaignPreparation key={product.id} product={product} onBusyChange={setBusy} />
           </section>
         </div>
@@ -74,7 +75,7 @@ export function DivulgacaoIAView({ initialProduct, onOpenVideoCreator, defaultSu
           <p className="text-sm text-slate-600">Prepare o texto da oferta antes de compartilhar no TikTok.</p>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setTab("automatica")} className="min-h-11 rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-800">Preparar oferta</button>
-            {onOpenVideoCreator && <button type="button" onClick={() => onOpenVideoCreator(product)} className="min-h-11 rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white">Criar roteiro no Flow</button>}
+            {onOpenVideoCreator && <button type="button" onClick={() => onOpenVideoCreator(product)} className="min-h-11 rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white">Criar vídeo com IA</button>}
           </div>
         </section>
       )}

@@ -266,7 +266,7 @@ export const ProductMetricsModal: React.FC<ProductMetricsModalProps> = ({
                     className="px-4 py-2 rounded-lg bg-[#EE4D2D] hover:bg-[#E03A17] text-white font-medium text-xs shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>Gerar no Flow</span>
+                    <span>Criar vídeo com IA</span>
                   </button>}
                 </div>
               </div>
@@ -298,13 +298,13 @@ export const ProductMetricsModal: React.FC<ProductMetricsModalProps> = ({
                       <div className="w-8 h-8 rounded-lg bg-orange-50 text-[#EE4D2D] flex items-center justify-center mb-2.5">
                         <Video className="w-4 h-4" />
                       </div>
-                      <h3 className="font-semibold text-slate-900 text-xs sm:text-sm">Roteiro para Flow</h3>
+                      <h3 className="font-semibold text-slate-900 text-xs sm:text-sm">Vídeo com IA</h3>
                       <p className="text-xs text-slate-500 mt-1 leading-snug">
-                        Prepare o roteiro e o prompt para gerar o vídeo no Google Flow.
+                        Prepare o roteiro e o prompt do seu vídeo.
                       </p>
                     </div>
                     <div className="mt-3 flex items-center text-xs font-medium text-[#EE4D2D] gap-1">
-                      Abrir criação no Flow →
+                      Abrir criador de vídeo →
                     </div>
                   </div>}
 
