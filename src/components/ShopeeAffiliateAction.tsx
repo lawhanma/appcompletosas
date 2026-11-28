@@ -175,18 +175,18 @@ export const ShopeeAffiliateAction: React.FC<ShopeeAffiliateActionProps> = ({
           <div>
             <span className="text-xs font-semibold text-emerald-800 uppercase flex items-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              Afiliação Aprovada e Ativa na Shopee
+              {product.listingSourceUrl ? "Afiliação na Shopee" : "Afiliação Aprovada e Ativa na Shopee"}
             </span>
             <p className="text-xs text-emerald-900 mt-0.5">
-              Você ganha <strong>{product.commissionRate}%</strong> de comissão líquida a cada venda realizada pelo seu link.
+              {product.listingSourceUrl ? "Consulte a elegibilidade e a comissão no Portal de Afiliados da Shopee." : <>Você ganha <strong>{product.commissionRate}%</strong> de comissão líquida a cada venda realizada pelo seu link.</>}
             </p>
           </div>
-          <div className="text-left sm:text-right">
+          {!product.listingSourceUrl && <div className="text-left sm:text-right">
             <span className="text-xs text-emerald-700">Seu ganho por venda:</span>
             <div className="text-base font-mono-code font-bold text-emerald-800">
               R$ {product.commissionValue.toFixed(2).replace(".", ",")}
             </div>
-          </div>
+          </div>}
         </div>
       )}
 
@@ -325,7 +325,7 @@ export const ShopeeAffiliateAction: React.FC<ShopeeAffiliateActionProps> = ({
       </div>
 
       {/* Commission Details */}
-      <div className="p-3.5 bg-slate-50 rounded-lg border border-slate-200/70 text-xs text-slate-600 space-y-1">
+      {!product.listingSourceUrl && <div className="p-3.5 bg-slate-50 rounded-lg border border-slate-200/70 text-xs text-slate-600 space-y-1">
         <div className="font-semibold text-slate-800">Regras de Comissionamento:</div>
         <div className="flex justify-between">
           <span>• Comissão Shopee Afiliados (Oficial):</span>
@@ -341,7 +341,7 @@ export const ShopeeAffiliateAction: React.FC<ShopeeAffiliateActionProps> = ({
             R$ {product.commissionValue.toFixed(2).replace(".", ",")}
           </span>
         </div>
-      </div>
+      </div>}
 
       {/* Loading Animation Modal */}
       {isLoadingAnimationOpen && (

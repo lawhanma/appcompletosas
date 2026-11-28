@@ -12,6 +12,7 @@ import {
 import { AffiliateLinkField } from "./AffiliateLinkField";
 import { validateAffiliateLink } from "../utils/affiliateLink";
 import { GroupPublishingQueue } from "./GroupPublishingQueue";
+import { GroupSalesTextDialog } from "./GroupSalesTextDialog";
 import { 
   Users, 
   ExternalLink, 
@@ -91,6 +92,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
 
   // Active publishing modal / panel state
   const [activeGroupForPublishing, setActiveGroupForPublishing] = useState<FacebookGroup | null>(null);
+  const [salesTextGroup, setSalesTextGroup] = useState<FacebookGroup | null>(null);
   const [copyStyle, setCopyStyle] = useState<"urgencia" | "review" | "cupom" | "viral">("urgencia");
   const [customCopyText, setCustomCopyText] = useState<string>("");
 
@@ -162,7 +164,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
     const link = validateAffiliateLink(affiliateLink) || "[Informe seu link de afiliado]";
     const price = prod.price.toLocaleString("pt-BR", {style: "currency", currency: "BRL"});
     const heading = style === "cupom" ? "Confira esta oferta" : style === "review" ? "Um achado para conhecer" : style === "viral" ? "Achadinho do dia" : "Oferta para conferir";
-    return `${heading}\n\n${prod.name}\nPreço no catálogo: ${price}\n\n${link}\n\nConfira preço, frete e disponibilidade no anúncio. Link de afiliado: posso receber comissão pela compra.`;
+    return `${heading}\n\n${prod.name}${prod.listingSourceUrl ? "" : `\nPreço no catálogo: ${price}`}\n\n${link}\n\nConfira preço, frete e disponibilidade no anúncio. Link de afiliado: posso receber comissão pela compra.`;
   };
 
   // Sync custom copy when product, style, or active group changes
@@ -501,7 +503,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
                     <h4 className="font-bold text-slate-900 text-xs truncate mt-0.5">
                       {selectedProduct.name}
                     </h4>
-                    <div className="flex items-baseline gap-2 mt-1">
+                    {selectedProduct.listingSourceUrl ? <p className="mt-1 text-xs text-slate-600">Preço no anúncio da Shopee</p> : <div className="flex items-baseline gap-2 mt-1">
                       <span className="text-xs font-black text-[#FF5722]">
                         R$ {selectedProduct.price.toFixed(2).replace(".", ",")}
                       </span>
@@ -511,7 +513,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
                       <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-1 rounded ml-auto">
                         +{selectedProduct.commissionRate}% Comiss.
                       </span>
-                    </div>
+                    </div>}
                   </div>
                 </div>
               </div>
@@ -1019,6 +1021,14 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
                   <Zap className="w-3.5 h-3.5 fill-white" />
                   <span>Preparar publicação</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setSalesTextGroup(group)}
+                  className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-800 hover:bg-orange-100"
+                >
+                  <Sparkles className="size-4 shrink-0" aria-hidden="true" />
+                  Texto de venda para postagem no grupo
+                </button>
 
                 {/* Linha Secundária: Compartilhamento Direto na Rede Social + Acesso ao Grupo */}
                 <div className="flex items-center gap-2">
@@ -1391,6 +1401,7 @@ export const GruposOfertasView: React.FC<GruposOfertasViewProps> = ({
       {/* ========================================================= */}
       {/* MODAL: DISPARO AUTOMÁTICO EM TODOS OS GRUPOS COM IA       */}
       {/* ========================================================= */}
+      {salesTextGroup && <GroupSalesTextDialog group={salesTextGroup} onClose={() => setSalesTextGroup(null)} />}
       {isMassPostingOpen && <GroupPublishingQueue key={selectedProduct.id} groups={filteredGroups} text={customCopyText} ready={!!validateAffiliateLink(affiliateLink)} onClose={() => setIsMassPostingOpen(false)} />}
     </div>
   );

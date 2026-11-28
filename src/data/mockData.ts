@@ -7,6 +7,7 @@ import { PRODUCTS_COZINHA } from "./productsCozinha";
 import { PRODUCTS_CASA_JARDIM } from "./productsCasaJardim";
 import { PRODUCTS_BRINQUEDOS } from "./productsBrinquedos";
 import { getWorkingShopeeUrl } from "../utils/shopee";
+import { getShopeeCatalogAdditions } from "./realShopeeListings";
 
 export const SUPPLIERS: Supplier[] = [
   {
@@ -102,7 +103,8 @@ const RAW_ALL_PRODUCTS: Product[] = [
   ...PRODUCTS_COZINHA,
   ...PRODUCTS_SAZONAIS,
   ...PRODUCTS_CASA_JARDIM,
-  ...PRODUCTS_BRINQUEDOS
+  ...PRODUCTS_BRINQUEDOS,
+  ...SUPPLIERS.flatMap(supplier => getShopeeCatalogAdditions(supplier.category, supplier.id)),
 ];
 
 export const PRODUCTS: Product[] = RAW_ALL_PRODUCTS.map((p) => ({

@@ -12,7 +12,7 @@ export function CampaignProfileField({profiles,value,onChange,loading,error,disa
       <option value="">{loading?'Carregando perfis…':'Divulgar sem perfil'}</option>
       {active.map(p=><option key={p.id} value={p.id}>{p.name} · {PLATFORM_NAMES[p.platform]} · @{(p.handle||'').replace(/^@+/,'')}</option>)}
     </select>
-    <p id={`${id}-help`} className="text-xs text-slate-500">{!loading&&!active.length?'Você pode divulgar sem cadastrar um perfil.':'Se preferir, escolha um perfil. Sem seleção, a divulgação fica registrada na sua conta.'}</p>
+    <p id={`${id}-help`} className="text-xs text-slate-500">{!loading&&!active.length?'Você pode preparar a oferta sem cadastrar um perfil.':'Escolha um perfil se quiser identificá-lo na oferta.'}</p>
     {error&&<p role="alert" className="text-xs text-red-700">{error}</p>}
     {!disabled&&<button type="button" disabled={loading} onClick={onReload} className="text-xs font-medium text-slate-600 hover:text-slate-900 disabled:opacity-50">Atualizar perfis</button>}
   </div>;

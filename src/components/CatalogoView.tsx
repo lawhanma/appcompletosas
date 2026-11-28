@@ -96,7 +96,7 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
       p.tag.toLowerCase().includes(searchQuery.toLowerCase());
 
     return matchesNiche && matchesSearch && (!isFree || p.category===freeCategory);
-  });
+  }).sort((a, b) => Number(Boolean(b.listingSourceUrl)) - Number(Boolean(a.listingSourceUrl)));
 
   return (
     <div className="space-y-6">
@@ -344,25 +344,28 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
                     </span>
 
                     {/* Sales Count overlay */}
-                    <div className="absolute bottom-2 left-2.5 px-2 py-0.5 rounded bg-slate-900/70 backdrop-blur-xs text-white text-[10px] font-medium">
+                    {!product.listingSourceUrl && <div className="absolute bottom-2 left-2.5 px-2 py-0.5 rounded bg-slate-900/70 backdrop-blur-xs text-white text-[10px] font-medium">
                       {product.unitsSold} vendidas
-                    </div>
+                    </div>}
                   </div>
 
                   {/* Product Details */}
                   <div className="p-4 space-y-2">
                     <div className="flex items-center justify-between text-[11px] text-slate-500">
                       <span className="font-medium text-[#EE4D2D] uppercase">{product.category}</span>
-                      <div className="flex items-center gap-1 text-amber-500 font-medium">
+                      {!product.listingSourceUrl && <div className="flex items-center gap-1 text-amber-500 font-medium">
                         <Star className="w-3 h-3 fill-amber-400" />
                         <span>{product.rating}</span>
-                      </div>
+                      </div>}
                     </div>
 
                     <h3 className="font-display font-semibold text-slate-900 text-xs sm:text-sm line-clamp-2 leading-snug group-hover:text-[#EE4D2D] transition-colors">
                       {product.name}
                     </h3>
 
+                    {product.listingSourceUrl ? (
+                      <p className="pt-1 text-xs text-slate-600">Consulte preço e estoque na Shopee.</p>
+                    ) : <>
                     {/* Prices */}
                     <div className="pt-1 flex items-baseline gap-2">
                       <span className="text-base font-mono-code font-bold text-slate-900">
@@ -385,6 +388,7 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
                         R$ {product.commissionValue.toFixed(2).replace(".", ",")} ({product.commissionRate}%)
                       </span>
                     </div>
+                    </>}
                   </div>
                 </div>
 
@@ -401,7 +405,7 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
                     className="w-full py-2 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <Zap className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Ver Métricas & IA</span>
+                    <span>{product.listingSourceUrl ? "Ver anúncio e ferramentas" : "Ver Métricas & IA"}</span>
                   </button>
                 </div>
               </div>
@@ -422,6 +426,7 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
       {selectedProduct && (
         <ProductMetricsModal
           product={selectedProduct}
+          canCreateVideos
           onClose={() => setSelectedProduct(null)}
           onNavigateTab={(tab, prod) => {
             setSelectedProduct(null);

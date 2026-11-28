@@ -22,12 +22,14 @@ import { ShopeeAffiliateAction } from "./ShopeeAffiliateAction";
 
 interface ProductMetricsModalProps {
   product: Product | null;
+  canCreateVideos?: boolean;
   onClose: () => void;
   onNavigateTab: (tab: NavTab, product?: Product) => void;
 }
 
 export const ProductMetricsModal: React.FC<ProductMetricsModalProps> = ({
   product,
+  canCreateVideos = false,
   onClose,
   onNavigateTab
 }) => {
@@ -98,7 +100,7 @@ export const ProductMetricsModal: React.FC<ProductMetricsModalProps> = ({
                 }`}
               >
                 <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-                <span>MÉTRICAS</span>
+                <span>{product.listingSourceUrl ? "ANÚNCIO" : "MÉTRICAS"}</span>
               </button>
               <button
                 onClick={() => setActiveTab("afiliar")}
@@ -140,7 +142,16 @@ export const ProductMetricsModal: React.FC<ProductMetricsModalProps> = ({
           {/* Modal Body */}
           <div className="p-5 sm:p-6 overflow-y-auto space-y-4">
             {/* TAB 1: MÉTRICAS */}
-            {activeTab === "metricas" && (
+            {activeTab === "metricas" && product.listingSourceUrl && (
+              <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm text-slate-700">{product.description} Consulte o Portal de Afiliados para verificar a comissão elegível.</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <a href={product.shopeeUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded-lg bg-orange-600 px-3 text-sm font-semibold text-white">Abrir anúncio na Shopee</a>
+                  <a href={product.listingSourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center px-3 text-sm font-semibold text-slate-700 underline">Fonte do anúncio</a>
+                </div>
+              </div>
+            )}
+            {activeTab === "metricas" && !product.listingSourceUrl && (
               <div className="space-y-4">
                 {/* Two Top Boxes */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -250,13 +261,13 @@ export const ProductMetricsModal: React.FC<ProductMetricsModalProps> = ({
                   >
                     Ir para Afiliação
                   </button>
-                  <button
+                  {canCreateVideos && <button
                     onClick={() => onNavigateTab("gerar-videos", product)}
                     className="px-4 py-2 rounded-lg bg-[#EE4D2D] hover:bg-[#E03A17] text-white font-medium text-xs shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>Gerar Criativos</span>
-                  </button>
+                    <span>Gerar no Flow</span>
+                  </button>}
                 </div>
               </div>
             )}
@@ -277,9 +288,9 @@ export const ProductMetricsModal: React.FC<ProductMetricsModalProps> = ({
                   Selecione o canal para o qual deseja criar conteúdo viral ou automação com IA:
                 </p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                <div className={`grid grid-cols-1 ${canCreateVideos ? "sm:grid-cols-3" : "sm:grid-cols-2"} gap-3.5`}>
                   {/* Option 1: Vídeo Viral */}
-                  <div 
+                  {canCreateVideos && <div
                     onClick={() => onNavigateTab("gerar-videos", product)}
                     className="p-4 rounded-xl border border-slate-200/90 hover:border-slate-300 bg-white hover:bg-slate-50/50 cursor-pointer transition-colors flex flex-col justify-between group shadow-xs"
                   >
@@ -287,15 +298,15 @@ export const ProductMetricsModal: React.FC<ProductMetricsModalProps> = ({
                       <div className="w-8 h-8 rounded-lg bg-orange-50 text-[#EE4D2D] flex items-center justify-center mb-2.5">
                         <Video className="w-4 h-4" />
                       </div>
-                      <h3 className="font-semibold text-slate-900 text-xs sm:text-sm">Vídeo Viral com IA</h3>
+                      <h3 className="font-semibold text-slate-900 text-xs sm:text-sm">Roteiro para Flow</h3>
                       <p className="text-xs text-slate-500 mt-1 leading-snug">
-                        Gera vídeo no formato vertical (TikTok, Reels, Shorts) com locução brasileira, legendas dinâmicas e roteiro completo.
+                        Prepare o roteiro e o prompt para gerar o vídeo no Google Flow.
                       </p>
                     </div>
                     <div className="mt-3 flex items-center text-xs font-medium text-[#EE4D2D] gap-1">
-                      Abrir Criador de Vídeos →
+                      Abrir criação no Flow →
                     </div>
-                  </div>
+                  </div>}
 
                   {/* Option 2: Divulgação Automática 6 Redes */}
                   <div 
@@ -307,15 +318,15 @@ export const ProductMetricsModal: React.FC<ProductMetricsModalProps> = ({
                         <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center">
                           <Zap className="w-4 h-4 fill-white" />
                         </div>
-                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 font-medium">6 Redes</span>
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 font-medium">Oferta</span>
                       </div>
                       <h3 className="font-semibold text-slate-900 text-xs sm:text-sm">Divulgação Automática</h3>
                       <p className="text-xs text-slate-600 mt-1 leading-snug">
-                        Postagem instantânea no Kwai, TikTok, Facebook, WhatsApp, Instagram e Twitter com cálculo de vendas em tempo real.
+                        Prepare o texto do produto com seu link de afiliado.
                       </p>
                     </div>
                     <div className="mt-3 flex items-center text-xs font-medium text-emerald-800 gap-1">
-                      Postar Automaticamente Agora ⚡
+                      Preparar divulgação →
                     </div>
                   </div>
 
@@ -330,7 +341,7 @@ export const ProductMetricsModal: React.FC<ProductMetricsModalProps> = ({
                       </div>
                       <h3 className="font-semibold text-slate-900 text-xs sm:text-sm">Grupos do Facebook & Copies</h3>
                       <p className="text-xs text-slate-500 mt-1 leading-snug">
-                        Copies prontas com gatilhos mentais para WhatsApp, canais de Telegram, +1.7M de membros em grupos do Facebook.
+                        Textos para compartilhar em grupos de ofertas.
                       </p>
                     </div>
                     <div className="mt-3 flex items-center text-xs font-medium text-slate-700 gap-1">
@@ -341,150 +352,23 @@ export const ProductMetricsModal: React.FC<ProductMetricsModalProps> = ({
               </div>
             )}
 
-            {/* TAB 4: DIVULGAÇÃO COM IA */}
             {activeTab === "divulgacao-ia" && (
-              <div className="space-y-4 animate-in fade-in duration-150">
-                {/* Feature Banner */}
-                <div className="p-4.5 rounded-xl bg-slate-50 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="inline-flex items-center gap-1.5 px-2 py-0.2 rounded bg-orange-100 text-[#EE4D2D] text-[10px] font-semibold uppercase tracking-wider">
-                      <Zap className="w-3 h-3 fill-current" />
-                      Automação Multicanal Shopee
-                    </div>
-                    <h3 className="text-sm sm:text-base font-semibold text-slate-900">
-                      Divulgue esse Produto Automaticamente nas 6 Maiores Redes Sociais
-                    </h3>
-                    <p className="text-xs text-slate-500 max-w-xl leading-relaxed">
-                      A inteligência artificial localiza o público comprador, captura o vídeo 9:16 gerado para o produto, formata a copy persuasiva e publica no Kwai, TikTok, Facebook, WhatsApp, Instagram e Twitter.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleOpenAutoPosting}
-                    className="px-4 py-2 rounded-lg bg-[#EE4D2D] hover:bg-[#E03A17] text-white font-medium text-xs shadow-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0"
-                  >
-                    <Zap className="w-3.5 h-3.5 fill-white" />
-                    <span>POSTAR AGORA</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                {/* 6 Target Social Platforms Grid */}
-                <div>
-                  <h4 className="text-xs font-medium uppercase text-slate-500 tracking-wider mb-2">
-                    Canais Ativos na Divulgação Automática:
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                    <div className="p-2.5 bg-white border border-slate-200/80 rounded-lg flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded bg-orange-500 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                        KW
-                      </div>
-                      <div>
-                        <div className="font-medium text-slate-900 text-xs">Kwai Brasil</div>
-                        <div className="text-[10px] text-slate-400">Vídeo 9:16 + Loja</div>
-                      </div>
-                    </div>
-
-                    <div className="p-2.5 bg-white border border-slate-200/80 rounded-lg flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                        TK
-                      </div>
-                      <div>
-                        <div className="font-medium text-slate-900 text-xs">TikTok Shop</div>
-                        <div className="text-[10px] text-slate-400">Feed ForYou + Link</div>
-                      </div>
-                    </div>
-
-                    <div className="p-2.5 bg-white border border-slate-200/80 rounded-lg flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                        FB
-                      </div>
-                      <div>
-                        <div className="font-medium text-slate-900 text-xs">Facebook</div>
-                        <div className="text-[10px] text-slate-400">+1.7M Membros</div>
-                      </div>
-                    </div>
-
-                    <div className="p-2.5 bg-white border border-slate-200/80 rounded-lg flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded bg-emerald-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                        WA
-                      </div>
-                      <div>
-                        <div className="font-medium text-slate-900 text-xs">WhatsApp VIP</div>
-                        <div className="text-[10px] text-slate-400">Listas & Grupos</div>
-                      </div>
-                    </div>
-
-                    <div className="p-2.5 bg-white border border-slate-200/80 rounded-lg flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded bg-pink-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                        IG
-                      </div>
-                      <div>
-                        <div className="font-medium text-slate-900 text-xs">Instagram</div>
-                        <div className="text-[10px] text-slate-400">Reels & Stories</div>
-                      </div>
-                    </div>
-
-                    <div className="p-2.5 bg-white border border-slate-200/80 rounded-lg flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded bg-slate-800 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                        TT
-                      </div>
-                      <div>
-                        <div className="font-medium text-slate-900 text-xs">Twitter / X</div>
-                        <div className="text-[10px] text-slate-400">Threads de Oferta</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Flow Steps explanation */}
-                <div className="p-3.5 bg-slate-50 border border-slate-200/70 rounded-lg space-y-2.5">
-                  <div className="text-xs font-medium text-slate-600 uppercase tracking-wider">
-                    Etapas Automatizadas do Disparo:
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-slate-600">
-                    <div className="flex items-start gap-2 bg-white p-2 rounded-md border border-slate-200/60">
-                      <span className="w-4 h-4 rounded-full bg-slate-100 text-slate-700 font-bold text-[10px] flex items-center justify-center shrink-0">1</span>
-                      <span><strong>Achando Público:</strong> Segmenta compradores da categoria {product.category}.</span>
-                    </div>
-                    <div className="flex items-start gap-2 bg-white p-2 rounded-md border border-slate-200/60">
-                      <span className="w-4 h-4 rounded-full bg-slate-100 text-slate-700 font-bold text-[10px] flex items-center justify-center shrink-0">2</span>
-                      <span><strong>Vídeo & Copy:</strong> Conecta criativo 9:16 com gancho de escassez e link de afiliado.</span>
-                    </div>
-                    <div className="flex items-start gap-2 bg-white p-2 rounded-md border border-slate-200/60">
-                      <span className="w-4 h-4 rounded-full bg-slate-100 text-slate-700 font-bold text-[10px] flex items-center justify-center shrink-0">3</span>
-                      <span><strong>Relatório:</strong> Exibe a quantidade de vendas e comissões no Pix geradas.</span>
-                    </div>
-                  </div>
-
-                  <div className="pt-1">
-                    <button
-                      type="button"
-                      onClick={handleOpenAutoPosting}
-                      className="w-full py-2.5 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-                    >
-                      <Zap className="w-3.5 h-3.5 text-amber-400" />
-                      <span>INICIAR DIVULGAÇÃO AUTOMÁTICA (SIMULAR POSTAGEM & VENDAS)</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <section className="rounded-xl border border-slate-200 bg-white p-5 space-y-3">
+                <h3 className="font-semibold text-slate-900">Prepare esta oferta</h3>
+                <p className="text-sm text-slate-600">Gere o texto com seu link de afiliado para compartilhar nas suas redes.</p>
+                <button type="button" onClick={handleOpenAutoPosting} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-orange-600 px-4 text-sm font-semibold text-white hover:bg-orange-700">
+                  <Zap className="size-4" aria-hidden="true" /> Preparar divulgação
+                </button>
+              </section>
             )}
           </div>
         </div>
       </div>
 
-      {/* Multi-Platform Auto Posting & Sales Results Simulation Modal */}
       <DivulgacaoAutomaticaModal
         product={product}
         isOpen={isAutoPostingOpen}
         onClose={() => setIsAutoPostingOpen(false)}
-        onNavigateToFinancial={() => {
-          setIsAutoPostingOpen(false);
-          onClose();
-          onNavigateTab("financeiro");
-        }}
       />
     </>
   );

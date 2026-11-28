@@ -136,11 +136,11 @@ export const AffiliationLoadingModal: React.FC<AffiliationLoadingModalProps> = (
             <div className="text-xs font-semibold text-slate-900 truncate">
               {product.name}
             </div>
-            <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500">
+            {product.listingSourceUrl ? <p className="mt-0.5 text-[11px] text-slate-500">Consulte a comissão no Portal de Afiliados.</p> : <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500">
               <span>Comissão: <strong className="text-emerald-700">{product.commissionRate}%</strong></span>
               <span>•</span>
               <span>Ganho estimado: <strong className="text-emerald-700">R$ {product.commissionValue.toFixed(2).replace(".", ",")}</strong></span>
-            </div>
+            </div>}
           </div>
         </div>
 

@@ -52,6 +52,7 @@ export interface Product {
   marketTag: string;
   estimatedConversion: number; // e.g. 4.0%
   shopeeUrl: string;
+  listingSourceUrl?: string;
 }
 
 export interface VideoScene {
